@@ -17,21 +17,6 @@
   
 </div>
 
----
-
-## 📋 Table of Contents
-
-- [🌍 Vision](#-vision)
-- [📖 Overview](#-overview)
-- [🏗️ Technical Architecture](#️-technical-architecture)
-- [🚀 Getting Started](#-getting-started)
-- [✨ Features](#-features)
-- [🤝 Contributing](#-contributing)
-- [📜 Code of Conduct](#code-of-conduct)
-- [📜 License](#-license)
-- [🙏 Acknowledgments](#-acknowledgments)
-
-
 ## 🌍 Vision
 
 The Enhanced Global Consciousness Project (GCP 2.0) is an ambitious open-source initiative aimed at fostering global awareness, interconnectedness, and collective intelligence through technology. Our mission is to create tools and platforms that help humanity understand our shared challenges and work together toward sustainable solutions.

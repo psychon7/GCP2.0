@@ -11,9 +11,9 @@
   
   <br>
   
-  <img src="https://img.shields.io/github/stars/yourusername/enhanced-global-consciousness?style=social" alt="GitHub stars">
-  <img src="https://img.shields.io/github/forks/yourusername/enhanced-global-consciousness?style=social" alt="GitHub forks">
-  <img src="https://img.shields.io/github/watchers/yourusername/enhanced-global-consciousness?style=social" alt="GitHub watchers">
+  <img src="https://img.shields.io/github/stars/psychon7/GCP2.0?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/forks/psychon7/GCP2.0?style=social" alt="GitHub forks">
+  <img src="https://img.shields.io/github/watchers/psychon7/GCP2.0?style=social" alt="GitHub watchers">
   
 </div>
 
@@ -47,15 +47,15 @@ This project builds upon the concept of global consciousness - the idea that hum
 
 ### Key Objectives
 
-- 🧠 **Consciousness Measurement**: Develop tools to measure and visualize collective human consciousness
-- 🌐 **Global Connectivity**: Create platforms that connect people across geographical and cultural boundaries
-- 📊 **Data-Driven Insights**: Provide actionable insights from global consciousness data
-- 🤝 **Collaborative Solutions**: Enable collective problem-solving for global challenges
-- 🔬 **Research Advancement**: Contribute to the scientific understanding of consciousness
+- 🧠 **Consciousness Measurement**: Generate cryptographically-secure TRNG stream (≥ 256 b/node/sec)
+- 🌐 **Global Connectivity**: Build a vertically-integrated, 100-camera global network with real-time coherence analytics
+- 📊 **Data-Driven Insights**: Compute multi-metric coherence analytics (CEC, PNS, FCI, MFR, RCC) with 5s refresh
+- 🤝 **Collaborative Solutions**: Correlate spikes with geo-located news/sports/events in under 30s
+- 🔬 **Research Advancement**: Provide one-click experiment setup with rolling p-value & auto-stop
 
 ## 🏗️ Technical Architecture
 
-The technical architecture is designed for a production-grade, cost-efficient, single-VPS deployment that can later be shard-scaled. It focuses on a CCTV-Based True Random Number Generator (TRNG) Network.
+The technical architecture is designed for a production-grade, cost-efficient, single-VPS deployment that can later be shard-scaled to 1,000+ nodes with zero architectural re-writes. It focuses on a CCTV-Based True Random Number Generator (TRNG) Network with end-to-end latency under 100ms and monthly operating costs under €120.
 
 For a comprehensive understanding, please refer to the [Detailed Technical Blueprint](technical%20blueprint.md).
 
@@ -91,16 +91,16 @@ For a comprehensive understanding, please refer to the [Detailed Technical Bluep
 
 | **Layer**          | **Language**                                 | **Rationale**                                              |
 |--------------------|----------------------------------------------|------------------------------------------------------------|
-| **Edge-Cam Agent** | **Rust**                                     | zero-cost abstractions, tokio async RTSP, SIMD entropy math|
+| **Edge-Cam Agent** | **Rust 1.78**                                | zero-cost abstractions, tokio async RTSP, SIMD entropy math|
 | **Core Entropy + QA**| Rust (lib) exposed via C-ABI + Python bindings | keeps hot-path in native, lets Python orchestrate          |
-| **Ingest Gateway** | Go (tiny) or Rust                            | memory-safe, ultralight; handles TLS, auth, throttling     |
-| **Coherence Analyzer**| Python 3.12 + Numba + CuPy                   | rapid math iteration, GPU fallback, easy SciPy stats       |
-| **Event Correlator**| Python + LangChain + Ollama LLMs (on-device) | pluggable NLP, no external costs                           |
-| **API Gateway**    | FastAPI + GraphQL                            | async, automatic OpenAPI, websocket-friendly               |
-| **Visualization**  | Next.js 15 + React 19 + Three.js/WebGL & WebGPU | SSR + CSR, leverages 2025 WebGPU adoption                |
+| **Ingest Gateway** | Go or Rust                                   | memory-safe, ultralight; handles TLS, auth, throttling     |
+| **Coherence Analyzer**| Python 3.12 + Numba 0.60 + CuPy 13            | rapid math iteration, GPU fallback, easy SciPy stats       |
+| **Event Correlator**| Python + LangChain + Ollama (Llama-3-8B)     | pluggable NLP, no external costs                           |
+| **API Gateway**    | FastAPI 0.111 + Ariadne GraphQL              | async, automatic OpenAPI, websocket-friendly               |
+| **Visualization**  | Next.js 15 + React 19 + Three.js 0.163 + WebGPU | SSR + CSR, leverages 2025 WebGPU adoption                |
 | **Orchestration**  | Docker Compose (single VPS) → K3s when sharding| seamless migration path                                    |
-| **Messaging**      | NATS JetStream                               | lightweight, at-least-once, zero-broker single binary      |
-| **DB**             | TimescaleDB (metrics) + SQLite (edge cache) + Redis (hot cache) | time-series queries, retention policies                    |
+| **Messaging**      | NATS JetStream 3.x                           | lightweight, at-least-once, zero-broker single binary      |
+| **DB**             | TimescaleDB 2.15 (PostgreSQL 16) + SQLite + Redis 7 | time-series queries, retention policies                    |
 | **CI/CD**          | GitHub Actions → Docker Hub → Watchtower on VPS| zero downtime rolling update                               |
 | **Observability**  | Prometheus + Grafana + Loki                  | one-line Rust/Python exporters                             |
 
@@ -121,17 +121,19 @@ For more details on specific components like the Edge-Cam Agent, QA Engine, Cohe
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.12 or higher
 - Node.js 16 or higher
+- Rust 1.78 or higher
 - Docker and Docker Compose
 - Git
+- CUDA 12 (for GPU acceleration)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/enhanced-global-consciousness.git
-   cd enhanced-global-consciousness
+   git clone https://github.com/psychon7/GCP2.0.git
+   cd GCP2.0
    ```
 
 2. **Set up the backend**
@@ -173,25 +175,39 @@ For more details on specific components like the Edge-Cam Agent, QA Engine, Cohe
 ```python
 import requests
 
-# Get global consciousness data
-response = requests.get('http://localhost:8000/api/v1/consciousness/global')
+# Get coherence metrics data
+response = requests.get('http://localhost:8000/api/v1/metrics/coherence/global')
 data = response.json()
 
-print(f"Current global consciousness level: {data['level']}")
-print(f"Participants: {data['participants']}")
+print(f"Current CEC level: {data['cec']}")
+print(f"Field Coherence Index: {data['fci']}")
+print(f"Active nodes: {data['active_nodes']}")
 ```
 
 #### Real-time Data Streaming
 
 ```javascript
-// WebSocket connection for real-time updates
-const ws = new WebSocket('ws://localhost:8000/ws/consciousness');
+// GraphQL subscription for real-time updates
+const client = new GraphQLClient('http://localhost:8000/graphql');
 
-ws.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    console.log('Real-time consciousness data:', data);
-    updateVisualization(data);
-};
+const subscription = client.subscribe({
+  query: `subscription {
+    onMetricUpdate(metric: "CEC") {
+      timestamp
+      value
+      nodes {
+        id
+        location
+        quality
+      }
+    }
+  }`
+});
+
+subscription.subscribe(({ data }) => {
+  console.log('Real-time coherence data:', data.onMetricUpdate);
+  updateGlobeVisualization(data.onMetricUpdate);
+});
 ```
 
 #### Data Visualization
@@ -214,27 +230,27 @@ analyzer.visualize(map_data, output='consciousness_map.html')
 <td width="50%">
 
 ### 🚀 Current Features
-- ✅ **Real-time Data Collection**: Live consciousness data gathering
-- ✅ **Interactive Dashboard**: Global consciousness visualization
-- ✅ **User Tracking**: Participation and engagement metrics
-- ✅ **Analytics Engine**: Advanced data insights and patterns
-- ✅ **Collaboration Tools**: Community interaction features
-- ✅ **RESTful API**: Comprehensive API for integrations
-- ✅ **Docker Support**: Containerized deployment
-- ✅ **Responsive Design**: Mobile-friendly interface
+- ✅ **Entropy Extraction**: Edge cameras extract entropy with Rust agents
+- ✅ **Quality Assurance**: NIST subset tests and other quality checks
+- ✅ **Coherence Analysis**: GPU-accelerated computation of coherence metrics (CEC, MFR, FCI, PNS, RCC)
+- ✅ **Interactive Globe**: Three.js/WebGL/WebGPU with real-time node visualization
+- ✅ **Event Correlation**: Correlating entropy spikes with global events
+- ✅ **GraphQL API**: Comprehensive API with subscription support
+- ✅ **Docker Support**: Containerized single-VPS deployment
+- ✅ **Experiment Console**: One-click setup for global experiments
 
 </td>
 <td width="50%">
 
 ### 🔮 Planned Features
-- 🔄 **AI Prediction Models**: Machine learning consciousness forecasting
-- 📱 **Mobile Applications**: iOS and Android native apps
-- 🌐 **IoT Integration**: Smart device connectivity
-- ⛓️ **Blockchain Verification**: Decentralized data integrity
-- 🌍 **Multi-language Support**: Global accessibility
-- 🔊 **Voice Interface**: Audio interaction capabilities
-- 📊 **Advanced Visualizations**: 3D and AR data representations
-- 🤖 **Chatbot Assistant**: AI-powered user support
+- 🔄 **Horizontal Scaling**: K3s deployment for 1,000+ node support
+- 📱 **Mobile Applications**: iOS and Android native apps for experiment monitoring
+- 🌐 **Additional Entropy Sources**: Expanding beyond CCTV to other sources
+- ⛓️ **Blockchain Verification**: Decentralized data integrity for research results
+- 🌍 **Multi-language Support**: Global dashboard accessibility
+- 🔊 **Advanced Event Detection**: Enhanced correlation with global events
+- 📊 **AR/VR Interfaces**: Immersive consciousness experiences
+- 🤖 **On-device LLMs**: Enhanced Llama model integration
 
 </td>
 </tr>

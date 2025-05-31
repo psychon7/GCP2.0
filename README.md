@@ -23,19 +23,14 @@
 
 - [🌍 Vision](#-vision)
 - [📖 Overview](#-overview)
-- [✨ Features](#-features)
 - [🏗️ Technical Architecture](#️-technical-architecture)
 - [🚀 Getting Started](#-getting-started)
-- [📊 Usage Examples](#-usage-examples)
-- [🗺️ Roadmap](#️-roadmap)
+- [✨ Features](#-features)
 - [🤝 Contributing](#-contributing)
-- [🧪 Testing](#-testing)
-- [📚 Documentation](#-documentation)
-- [🔒 Security](#-security)
-- [🌟 Community](#-community)
+- [📜 Code of Conduct](#code-of-conduct)
 - [📜 License](#-license)
 - [🙏 Acknowledgments](#-acknowledgments)
-- [📞 Contact](#-contact)
+
 
 ## 🌍 Vision
 

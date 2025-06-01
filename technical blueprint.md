@@ -278,13 +278,31 @@ The stack above keeps **entropy math** in **Rust/CUDA** for raw speed, reserves 
 ### **1. Detailed Component-Flow Graph (single-VPS baseline)**
 
 ```
+┌──────────────┐     ┌────────────── Camera Management (Python) ───────────────┐
+│ Public CCTV  │     │ ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│ /Volunteer   │────▶│ │ Discovery   │─▶│ Validation  │─▶│ Health      │      │
+│ Cameras      │     │ │ Scrapers    │  │ Worker Pool │  │ Monitor     │      │
+└──────────────┘     │ └─────────────┘  └─────────────┘  └─────────────┘      │
+                     │           │              │               │               │
+                     │           ▼              ▼               ▼               │
+                     │        ┌───────────────────────────────────────┐        │
+                     │        │ Registry DB (PostgreSQL)              │        │
+                     │        └───────────────────────────────────────┘        │
+                     │                            │                             │
+                     │                            ▼                             │
+                     │                 ┌────────────────────┐                  │
+                     │                 │ API Server (FastAPI)│                  │
+                     │                 └────────────────────┘                  │
+                     └───────────────────────────│─────────────────────────────┘
+                                                 │
+                                                 ▼
                  ┌──────────── Edge-Cam Node (Rust) ────────────┐
                  │  RTSP Pull                                   │
-┌──────────────┐ │  SIMD Entropy Math  (atmos, photon…)         │
-│ Public CCTV  │ │  von-Neumann / SHA-3                         │
-│ /Volunteer   │─┤  Protobuf EntropySample ⟶ NATS subject:      │
-│ Cameras      │ │  "entropy.raw.<node-id>"                     │
-└──────────────┘ │                                              │
+                 │  SIMD Entropy Math  (atmos, photon…)         │
+                 │  von-Neumann / SHA-3                         │
+                 │  Protobuf EntropySample ⟶ NATS subject:      │
+                 │  "entropy.raw.<node-id>"                     │
+                 │                                              │
                  └──────────────────────────────────────────────┘
                                │ JetStream (at-least-once)
                                ▼
@@ -474,3 +492,139 @@ All WebSocket payloads are < 2 KB; UI renders diff only, ensuring < 5 MB/h ↓ b
 ---
 
 Done — the structure above lets you clone ➜ docker compose up and have camera ➜ entropy ➜ metrics ➜ 3-D globe, with spike-to-news correlation ready for GCP-3.0 research runs.
+
+---
+
+## **11️⃣ Camera Management Module**
+
+### **11.1 Component Architecture**
+
+```
+flowchart TD
+    subgraph Discovery
+      A1[DOT Portal Scraper]
+      A2[EarthCam Crawler]
+      A3[Insecam Scanner]
+      A4[Shodan/ZoomEye Poller]
+    end
+
+    subgraph CameraManager Service
+      B1[Candidate Queue]  
+      B2[Validation Worker Pool]
+      B3[Health Monitor]
+      B4[Registry DB (Postgres)]
+      B5[API Server (FastAPI)]
+    end
+
+    subgraph Entropy Network
+      C1[Entropy Agent (Rust)]
+      C2[QA Engine → TimescaleDB] 
+      C3[Coherence Analyzer]
+    end
+
+    A1 --> B1
+    A2 --> B1
+    A3 --> B1
+    A4 --> B1
+
+    B1 --> B2
+    B2 --> B4
+    B4 --> B5
+    B4 --> B3
+    B3 --> B4
+
+    C1 -- "GET /active_cameras" --> B5
+    C1 --> NATS (entropy.raw)
+    B5 --> C1
+
+    B2 -. writes bench data .-> B4
+    B3 -. updates health status .-> B4
+```
+
+### **11.2 Module Overview**
+
+- **Discovery sub-modules** (A1…A4) run periodically (e.g. once/hour) to enqueue new camera URLs into a Candidate Queue.
+- **Validation Worker Pool** (B2) pulls from that queue, performs a quick "10-s bench":
+  - capture → 10 frames → measure actual FPS/res/latency
+  - compute a short "entropy sample" and run the NIST frequency test on those 1,000 bits
+  - if (FPS ≥ 5, res ≥ 320×240, latency ≤ 1 s, NIST_pass ≥ 0.9), mark as healthy candidate
+- **Registry DB** (B4, PostgreSQL) holds one row per camera with fields:
+  - camera_id, source_type, url, discovered_at, last_bench_at, fps, width, height, latency_ms, noise_score, health_status
+  - health_status ∈ {"pending", "healthy", "unhealthy"}
+- **Health Monitor** (B3) periodically (every 30 s) re-benchmarks all healthy cameras
+- **API Server** (B5) exposes a single endpoint: `GET /api/v1/active_cameras`
+
+### **11.3 Data Model**
+
+```python
+# services/camera_manager/models.py
+
+import sqlalchemy as sa
+from sqlalchemy.orm import declarative_base
+
+Base = declarative_base()
+
+class Camera(Base):
+    __tablename__ = "cameras"
+    camera_id    = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    source_type  = sa.Column(sa.String, nullable=False)  
+    url          = sa.Column(sa.Text, unique=True, nullable=False)
+    discovered_at= sa.Column(sa.TIMESTAMP(timezone=True), server_default=sa.func.now())
+    last_bench_at= sa.Column(sa.TIMESTAMP(timezone=True), nullable=True)
+    
+    # bench results:
+    fps          = sa.Column(sa.Float, nullable=True)
+    width        = sa.Column(sa.Integer, nullable=True)
+    height       = sa.Column(sa.Integer, nullable=True)
+    latency_ms   = sa.Column(sa.Float, nullable=True)
+    noise_score  = sa.Column(sa.Float, nullable=True)  # e.g., NIST pass ratio
+    health_status= sa.Column(sa.Enum("pending","healthy","unhealthy", name="health_enum"),
+                              nullable=False, server_default="pending")
+```
+
+### **11.4 Key Processes**
+
+#### **Discovery**
+- Multiple crawlers for DOT portals, EarthCam, Insecam, and Shodan/ZoomEye
+- Run on configurable schedules (hourly, daily)
+- Enqueue new URLs to candidate queue after deduplication
+
+#### **Validation**
+- Benchmark workers pull from queue and perform multi-metric assessment
+- Metrics: FPS, resolution, latency, entropy quality (NIST frequency test)
+- Healthy cameras must meet minimum thresholds across all metrics
+
+#### **Health Monitoring**
+- Periodic check (every 30s) on all healthy cameras
+- Quick 3-frame test to ensure continued operation
+- Automatically mark cameras unhealthy if they fail checks
+
+#### **API Integration**
+- FastAPI endpoint for entropy_agent to query active cameras
+- Rust agent refreshes camera list every 5 minutes
+- Dynamic reconciliation of camera pool based on health status
+
+### **11.5 Fallback & Redundancy**
+
+- **Minimum Pool Size**: Enforce at least 20 simultaneous healthy cameras
+  - Temporarily relax thresholds if pool size drops below minimum
+  - Emit Prometheus alert if still below threshold
+- **Region-Aware Quota**: Store geo data to maximize geographic diversity
+  - Limit cameras per region to ensure distributed entropy sources
+- **Graceful Decommission**: Keep unhealthy cameras for 24h for possible recovery
+
+### **11.6 Deployment**
+
+| **Component** | **Replicas** | **CPU** | **Memory** |
+| --- | --- | --- | --- |
+| camera_manager | 1 | 500m | 512MB |
+| postgres | 1 | 200m | 512MB |
+
+**Resource Estimates**: ~1GB total memory, ~700m CPU
+
+**Monitoring Metrics**:
+- `camera_discovered_total{source="dot"}`
+- `camera_health_status{status="healthy"}`
+- `camera_bench_latency_ms` (histogram)
+
+This module ensures the entropy_agent always has a fresh, globally diverse, high-quality camera pool without manual URL management.

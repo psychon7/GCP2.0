@@ -42,26 +42,33 @@ For a comprehensive understanding, please refer to the [Detailed Technical Bluep
 ### High-Level Component Graph
 
 ```
-┌──────────┐        gRPC/Protobuf         ┌──────────────┐
-│ Edge-Cam │ ───────────────────────────▶ │  Ingest-GW   │─────────┐
-└──────────┘                               └──────────────┘         │
+┌──────────────┐     ┌──────────────────────────────────────┐
+│ Public CCTV  │     │ Camera Management (Python/FastAPI)   │
+│ /Cameras     │───▶│ Discovery → Validation → Health     │
+└──────────────┘     │ Postgres DB → API Server            │
+                      └──────────────────────────────────────┘
+                                           │
+                                           ▼
+┌────────┐        gRPC/Protobuf         ┌────────────┐
+│ Edge-Cam │ ─────────────────────────▶ │  Ingest-GW   │─────────┐
+└────────┘                               └────────────┘         │
    (Rust agent)                                                    │
         │                  NATS JetStream (pub/sub)                │
-        └──────────────────────────────────────────────────────────▶│
+        └──────────────────────────────────────────────────▶│
                                                                     ▼
-┌──────────────┐   shared‐mem (mmap)   ┌──────────────┐     ┌────────────────┐
-│ Entropy-Core │◀──────────────────────│  QA Engine   │◀───▶│   Metrics DB   │
+┌──────────────┐   shared‐mem (mmap)   ┌──────────────┐     ┌──────────────┐
+│ Entropy-Core │◀────────────────────────│  QA Engine   │◀───▶│   Metrics DB   │
 │   (Rust)     │                      └──────────────┘     │ (TimescaleDB)  │
-└──────────────┘                            ▲              └────────────────┘
+└──────────────┘                            ▲              └──────────────┘
          │                                   │                      ▲
          │                                   │ REST/GraphQL        │
          ▼                                   │ (Falcon)            │
 ┌──────────────┐                              │                     │
 │ Coherence    │ (CUDA / NumPy / Numba)       │                     │
-│  Analyzer    │──────────────────────────────┘                     │
+│  Analyzer    │───────────────────────────────────┘                     │
 └──────────────┘                                                    │
         │        WebSocket / GraphQL-Sub                             │
-        └──────────────────────────────▶ ┌──────────────────────────┐
+        └─────────────────────────────────▶ ┌──────────────────────────┐
                                          │   Next.js + Three.js     │
                                          │  Interactive Dashboard   │
                                          └──────────────────────────┘
@@ -71,6 +78,7 @@ For a comprehensive understanding, please refer to the [Detailed Technical Bluep
 
 | **Layer**          | **Language**                                 | **Rationale**                                              |
 |--------------------|----------------------------------------------|------------------------------------------------------------|
+| **Camera Management** | **Python 3.12 + FastAPI + SQLAlchemy 2.0**  | async IO for scrapers, workers & API, PostgreSQL ORM      |
 | **Edge-Cam Agent** | **Rust 1.78**                                | zero-cost abstractions, tokio async RTSP, SIMD entropy math|
 | **Core Entropy + QA**| Rust (lib) exposed via C-ABI + Python bindings | keeps hot-path in native, lets Python orchestrate          |
 | **Ingest Gateway** | Go or Rust                                   | memory-safe, ultralight; handles TLS, auth, throttling     |
@@ -86,6 +94,7 @@ For a comprehensive understanding, please refer to the [Detailed Technical Bluep
 
 ### Key Architectural Highlights
 
+*   **Camera Management**: Python-based discovery, validation, and health monitoring of public camera streams with automatic benchmarking and pool maintenance.
 *   **Entropy Extraction**: Edge cameras (Rust agents) perform entropy math (SIMD, LSB extraction) and push data via NATS.
 *   **Quality Assurance**: A Rust/Python microservice performs NIST-subset tests and other quality checks.
 *   **Coherence Analysis**: Python with Numba/CuPy for GPU-accelerated computation of coherence metrics (CEC, MFR, FCI, PNS, RCC).

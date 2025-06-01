@@ -388,42 +388,74 @@ The stack above keeps **entropy math** in **Rust/CUDA** for raw speed, reserves 
 
 ### **3. Project Directory Structure**
 
+
 ```
 gcp-trng/
-├── cmd/                      # tiny CLI wrappers
-│   ├── ingest-gw/
-│   ├── entropy-agent/
-│   └── coherence-cli/
-├── services/
-│   ├── entropy_agent/        # Rust
-│   ├── ingest_gw/            # Rust
-│   ├── entropy_core/         # Rust lib + Py bindings
-│   ├── qa_engine/            # Rust
-│   ├── coherence_analyzer/   # Python GPU
-│   ├── experiment_mgr/       # Python Celery
-│   └── event_correlator/     # Python + LLM
-├── libs/
-│   ├── proto/                # .proto definitions
-│   ├── cuda_kernels/         # .cu files for GPU ops
-│   └── common/               # shared utils (logging, cfg)
-├── api/
-│   └── gateway/              # FastAPI + GraphQL
-├── frontend/
-│   ├── dashboard/            # Next.js src/
-│   └── experiments/          # React admin panel
-├── deploy/
-│   ├── docker/               # Dockerfiles
-│   ├── helm/                 # Helm charts
-│   └── k8s/                  # raw manifests for k3s
-├── infra/
-│   ├── terraform/            # Hetzner + Backblaze
-│   └── ansible/              # one-shot VPS hardening
-├── scripts/                  # helper bash / Python
-├── docs/
+├── cmd/                        
+│   ├── ingest-gw/              
+│   ├── entropy-agent/          
+│   └── coherence-cli/          
+├── services/                   
+│   ├── camera_manager/         # Python FastAPI + bench/health workers
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── models.py
+│   │   ├── db.py
+│   │   ├── discovery/          
+│   │   │   ├── __init__.py
+│   │   │   ├── dot_scraper.py
+│   │   │   ├── earthcam_crawler.py
+│   │   │   ├── insecam_scanner.py
+│   │   │   └── shodan_poller.py
+│   │   ├── validation/         
+│   │   │   ├── __init__.py
+│   │   │   └── bench_worker.py
+│   │   ├── health/             
+│   │   │   ├── __init__.py
+│   │   │   └── health_checker.py
+│   │   ├── api/                
+│   │   │   ├── __init__.py
+│   │   │   └── routes.py
+│   │   └── requirements.txt
+│   ├── entropy_agent/           # Rust
+│   ├── ingest_gw/               # Rust
+│   ├── entropy_core/            # Rust lib + Py bindings
+│   ├── qa_engine/               # Rust
+│   ├── coherence_analyzer/      # Python CPU/GPU analytics
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── gpcm.py
+│   │   ├── rwmc.py
+│   │   ├── dfa.py
+│   │   ├── sampen.py
+│   │   ├── swzc.py
+│   │   ├── igbc.py
+│   │   └── utils.py
+│   ├── experiment_mgr/          # Python Celery
+│   └── event_correlator/        # Python + LLM
+├── libs/                       
+│   ├── proto/                   # .proto definitions
+│   ├── cuda_kernels/            # .cu files for GPU ops
+│   └── common/                  # shared utils (logging, cfg)
+├── api/                        
+│   └── gateway/                 # FastAPI + GraphQL
+├── frontend/                   
+│   ├── dashboard/               # Next.js src/
+│   └── experiments/             # React admin panel
+├── deploy/                     
+│   ├── docker/                  
+│   ├── helm/                    
+│   └── k8s/                     
+├── infra/                      
+│   ├── terraform/               
+│   └── ansible/                 
+├── scripts/                    
+├── docs/                       
 │   ├── architecture.md
 │   ├── api.md
 │   └── dev-setup.md
-└── tests/
+└── tests/                      
     ├── integration/
     └── gpu_bench/
 ```

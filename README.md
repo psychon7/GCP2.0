@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🌍 Enhanced Global Consciousness Project (GCP 2.0)</h1>
+  <h1>🌍 Enhanced Global Consciousness Project (GCP 3.0)</h1>
   <p><strong>Fostering global awareness and collective intelligence through technology</strong></p>
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

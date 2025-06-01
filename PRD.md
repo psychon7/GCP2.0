@@ -22,13 +22,14 @@ Build a vertically-integrated, 100-camera global network that extracts entropy f
 
 ### **In-Scope**
 
-1. **Edge Entropy Extraction** from RTSP/HTTP cameras.
-2. **Quality-Assurance Pipeline** (sub-second NIST subset, ApEn, χ², auto-corr).
-3. **GPU-accelerated Coherence Metrics** (CEC, PNS, FCI, MFR, RCC).
-4. **Event Correlation Service** pulling **NewsAPI**, **API-Sports**, **PredictHQ**, enriched via local Llama-3.
-5. **FastAPI / GraphQL Gateway** with JWT auth.
-6. **Next.js + Three.js/WebGPU** dashboard & experiment console.
-7. **CI/CD, monitoring, IaC** for single-VPS deployment.
+1. **Camera Management Module** for discovery, validation, and health monitoring of public camera streams.
+2. **Edge Entropy Extraction** from RTSP/HTTP cameras.
+3. **Quality-Assurance Pipeline** (sub-second NIST subset, ApEn, χ², auto-corr).
+4. **GPU-accelerated Coherence Metrics** (CEC, PNS, FCI, MFR, RCC).
+5. **Event Correlation Service** pulling **NewsAPI**, **API-Sports**, **PredictHQ**, enriched via local Llama-3.
+6. **FastAPI / GraphQL Gateway** with JWT auth.
+7. **Next.js + Three.js/WebGPU** dashboard & experiment console.
+8. **CI/CD, monitoring, IaC** for single-VPS deployment.
 
 ### **Out-of-Scope (v1)**
 
@@ -51,12 +52,13 @@ Build a vertically-integrated, 100-camera global network that extracts entropy f
 
 | **Req-ID** | **Description** | **Acceptance Criteria** |
 | --- | --- | --- |
-| FR-1 | Edge agent pulls frames (1–30 FPS), outputs SHA-3 512-bit samples | Hash digest arrives via NATS topic entropy.raw.<id> ≤ 100 ms after frame |
-| FR-2 | QA service scores each sample (0-100) | Node flagged when rolling score < 70 for 10 s |
-| FR-3 | Analyzer computes metrics every 5 s sliding window | Metrics row written to TimescaleDB and UI receives WS delta |
-| FR-4 | Spike detector (Z > 3) emits event to Event-Corr | Correlation service returns ≥ 1 headline or sports event with geo match confidence ≥ 0.7 |
-| FR-5 | Experiment manager schedules, tracks Wald SPRT | Auto-stop & persist summary when p < 0.01 or timeout |
-| FR-6 | Dashboard globe shows node spheres size ∝ quality, color ∝ coherence | Refresh ≤ 5 s; FPS ≥ 55 |
+| FR-1 | Camera Management discovers, validates, and maintains healthy camera pool | Maintain ≥ 100 active cameras with ≥ 80% availability and geographic diversity |
+| FR-2 | Edge agent pulls frames (1–30 FPS), outputs SHA-3 512-bit samples | Hash digest arrives via NATS topic entropy.raw.<id> ≤ 100 ms after frame |
+| FR-3 | QA service scores each sample (0-100) | Node flagged when rolling score < 70 for 10 s |
+| FR-4 | Analyzer computes metrics every 5 s sliding window | Metrics row written to TimescaleDB and UI receives WS delta |
+| FR-5 | Spike detector (Z > 3) emits event to Event-Corr | Correlation service returns ≥ 1 headline or sports event with geo match confidence ≥ 0.7 |
+| FR-6 | Experiment manager schedules, tracks Wald SPRT | Auto-stop & persist summary when p < 0.01 or timeout |
+| FR-7 | Dashboard globe shows node spheres size ∝ quality, color ∝ coherence | Refresh ≤ 5 s; FPS ≥ 55 |
 
 ---
 
@@ -64,12 +66,12 @@ Build a vertically-integrated, 100-camera global network that extracts entropy f
 
 | **Category** | **Target** |
 | --- | --- |
-| **Perf.** | <100 ms camera➔metric; end-to-end CPU <70 % on 8vCPU |
-| **Reliability** | VPS uptime ≥ 99.9 %; automatic node failover |
-| **Security** | mTLS edge→ingest, JWT auth, LUKS disk crypto |
-| **Scalability** | Linear scale to 300 nodes by adding worker pods |
+| **Perf.** | <100 ms camera➔metric; end-to-end CPU <70 % on 8vCPU; Camera Management benchmarking <30s per camera |
+| **Reliability** | VPS uptime ≥ 99.9 %; automatic node failover; camera pool health check every 30s |
+| **Security** | mTLS edge→ingest, JWT auth, LUKS disk crypto; camera access via throttled API only |
+| **Scalability** | Linear scale to 300 nodes by adding worker pods; discovery workers scale horizontally |
 | **Cost** | OPEX ≤ €120/mo single VPS |
-| **Compliance** | GDPR: only hashes + coarse geo stored |
+| **Compliance** | GDPR: only hashes + coarse geo stored; no raw camera frames persisted |
 
 ---
 
@@ -79,16 +81,22 @@ Mermaid:
 
 ```
 flowchart TD
-    subgraph Edge
-        CAM[Camera] --> AGENT(Rust Entropy Agent)
+    subgraph Sources
+        PUB[Public Cameras] --> CAM_MGR[Camera Management]
     end
+    
+    subgraph Edge
+        CAM_MGR --> AGENT(Rust Entropy Agent)
+    end
+    
+    CAM_MGR -- "Health/Metrics" --> PGDB[(PostgreSQL)]
     AGENT -- Protobuf:NATS --> INGEST[Ingest-GW]
     INGEST --> CORE[Entropy-Core]
     CORE --> QA[QA Engine]
     QA -- good --> ANALYZER[GPU Coherence Analyzer]
     QA -- Timescale --> TSDB[(TimescaleDB)]
     ANALYZER --> TSDB
-    ANALYZER -- WS ⇄ --> API[FastAPI/GraphQL]
+    ANALYZER -- WS ⇔ --> API[FastAPI/GraphQL]
     API --> UI[Next.js Globe]
     ANALYZER -- spike --> CORR[Event Correlator]
     CORR -- events --> TSDB
@@ -105,13 +113,14 @@ flowchart TD
 
 | **Layer** | **Tech** |
 | --- | --- |
+| Camera Management | Python 3.12, FastAPI, SQLAlchemy 2.0, OpenCV, aiohttp |
 | Edge | Rust 1.78, tokio, opencv-rust, sha3, prost |
 | Messaging | NATS JetStream 3.x |
 | Core Libs | Rust + PyO3 bindings |
 | GPU | CUDA 12, CuPy 13, Numba 0.60 |
 | API | FastAPI 0.111 + Ariadne GraphQL |
 | Auth | Keycloak 24 / JWT |
-| DB | TimescaleDB 2.15 (PostgreSQL 16 ext) |
+| DB | TimescaleDB 2.15 (PostgreSQL 16 ext), PostgreSQL 16 |
 | Cache | Redis 7 |
 | Front-end | Next.js 15, React 19, Three.js 0.163, WebGPU |
 | DevOps | Docker, Helm, k3s, GitHub Actions, Prometheus + Grafana |
@@ -120,7 +129,69 @@ flowchart TD
 
 ## **9. Detailed Component Specs**
 
-### **9.1 Entropy Agent (**
+### **9.1 Camera Management (**
+
+### **services/camera_management**
+
+### **)**
+
+*Language*: Python 3.12
+
+*Entry*: main.py
+
+*Key modules*
+
+| **Module** | **Purpose** |
+| --- | --- |
+| DiscoveryWorker | Async camera source scrapers for DOT, EarthCam, Insecam, Shodan |
+| BenchWorker | Validates and benchmarks camera streams (FPS, resolution, latency) |
+| EntropyQualityTest | NIST frequency test for entropy quality assessment |
+| HealthMonitor | Periodic health checks and status transitions for cameras |
+| APIServer | FastAPI server exposing camera endpoints for entropy_agent |
+
+*Data Model*
+
+```
+CREATE TABLE cameras(
+  id SERIAL PRIMARY KEY,
+  url TEXT NOT NULL UNIQUE,
+  source TEXT NOT NULL,
+  discovered_at TIMESTAMPTZ NOT NULL,
+  last_checked_at TIMESTAMPTZ NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  fps FLOAT,
+  resolution_width INT,
+  resolution_height INT,
+  latency_ms INT,
+  entropy_quality FLOAT,
+  metadata JSONB,
+  geo_lat FLOAT,
+  geo_lon FLOAT,
+  geo_city TEXT,
+  geo_country TEXT
+);
+```
+
+*Config (camera_mgmt.toml)*
+
+```
+min_pool_size = 100
+fps_threshold = 1.0
+max_latency_ms = 2000
+entropy_quality_threshold = 0.7
+api_port = 8000
+db_connection = "postgresql://user:pass@localhost:5432/cameras"
+```
+
+API Endpoints:
+
+| **Method** | **Path** | **Purpose** |
+| --- | --- | --- |
+| GET | /api/v1/active_cameras | Returns list of healthy camera URLs |
+| GET | /api/v1/cameras/stats | Returns discovery and health statistics |
+| GET | /metrics | Prometheus metric scrape |
+
+### **9.2 Entropy Agent (**
 
 ### **services/entropy_agent**
 
@@ -332,22 +403,32 @@ Alerts (Grafana OnCall):
 
 ---
 
-## **14. Risks & Mitigations**
+## **14. Risk Management**
 
 | **Risk** | **Likelihood** | **Impact** | **Mitigation** |
 | --- | --- | --- | --- |
-| CCTV feed outages | High | Medium | Auto-throttle; redundant nodes |
+| Camera feed disruption | High | Medium | Fallback to hardware RNG entropy mix |
+| Camera source blocking | High | Medium | IP rotation, request throttling, multiple source diversification |
+| Camera pool degradation | Medium | High | Continuous discovery, benchmarking, and health monitoring |
+| Camera geolocation accuracy | Medium | Low | Multi-source IP geolocation verification |
+| Region blackout (power/internet) | Medium | Medium | Geographic redundancy, NATS buffer |
+| Fake/poisoned node | Low | High | mTLS + node enrollment protocol, anomaly detection |
 | API provider rate-limits | Medium | Medium | Redis cache, exponential back-off |
 | GPU memory leak | Low | High | CuPy pooled allocator, nightly restart job |
 | Single-VPS failure | Medium | High | Daily pg_dump to B2, documented restore runbook |
+| Camera authentication failure | Medium | Medium | Implement camera authentication retry mechanism |
 
 ---
 
 ## **15. Open Questions**
 
-1. Which 100 public cameras meet licensing for data redistribution?
+1. Should we support hardware RNG backup (TPM, VirtIO) when entropy quality drops?
 2. Do we store raw frames for future audit (GDPR)?
 3. Exact set of cultural indices for MFR weights – source dataset?
+4. What is the minimum geographic diversity for camera pool (countries/continents)?
+5. Should we implement rate-limiting or IP rotation for camera discovery to avoid being blocked?
+6. Do we need custom authentication for non-public camera sources?
+7. How do we handle camera connection failures and disconnections?
 
 ---
 

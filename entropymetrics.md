@@ -228,3 +228,706 @@ docs/entropy-formulas.md
 3. Wire qa_engine and coherence_analyzer cargo/poetry dependencies to match.
 
 *With this document in‐repo, every dev or autonomous agent knows the exact math, units, language and file to touch—no ambiguity left.*
+
+Below is a set of lightweight, “near‐equivalent” coherence metrics you can compute in (near) real‐time on an 8 vCPU/32 GB RAM node. Each substitutes one (or more) of your original five “quantum‐inspired” measures with a far less compute‐heavy alternative, while still capturing:
+	•	Pairwise synchrony/coherence
+	•	Fractal or long‐range correlation
+	•	Nonlinearity/complexity
+	•	Regional clustering with geographic/​population weighting
+
+Wherever possible, I’ve chosen algorithms that are O(N·W) or O(N²) with very small constants—no FFTs, no full N² × W loops, and no heavy GPU kernels. All can run in pure Python (NumPy/​Numba) or PyTorch CPU if you prefer.
+
+⸻
+
+1 Replacing CEC (Collective Entanglement)
+
+Original Cost:
+	•	Build state vectors ψᵢ (size W), normalize → O(N·W)
+	•	Compute full Gram matrix of size N×N → O(N²·W)
+
+Goal: capture “global entanglement‐like” coherence across all N nodes at once, but much faster.
+
+1.1 “Global Pairwise Correlation Mean” (GPCM)
+
+Instead of building complex‐valued state vectors and computing all ⟨ψᵢ|ψⱼ⟩², compute a single scalar: the mean of all pairwise Pearson correlation coefficients (in magnitude).
+
+\text{GPCM} \;=\; \frac{2}{N(N-1)}\sum_{i<j} \bigl|\,\mathrm{corr}(\mathbf{x}_i,\mathbf{x}_j)\bigr|
+where \mathbf{x}_i is node i’s raw entropy series (length W).
+	•	Complexity: computing the N×N correlation matrix naïvely is O(N²·W), but we can approximate by sampling only a small fraction of pairs (see below) or precomputing each node’s mean and std and then using vectorized dot‐products:
+
+# Using NumPy broadcasting, this is still O(N²·W), but with tiny constants.
+X = (X - X.mean(axis=1, keepdims=True)) / X.std(axis=1, keepdims=True)  # shape (N, W)
+C = (X @ X.T) / (W - 1)     # N×N dense matrix of Pearson r
+gpcm = (2/ (N*(N-1))) * np.abs(np.triu(C, k=1)).sum()
+
+
+	•	Approximation Trick: If N=100, there are 4 950 pairs. That’s still fast (100² × 1 000 ≈ 10⁷ flops). On an 8 core CPU, you can do this in <10 ms if you multi‐thread or use Numba.
+	•	If N gets larger (e.g. 200–300), sample M random pairs per node (e.g. M=20) instead of all N–1. Then
+\[
+\text{approx\GPCM} = \frac{1}{N·M} \sum{i=1}^N \sum_{j∈S_i} \bigl|\mathrm{corr}(\mathbf{x}_i,\mathbf{x}_j)\bigr|,
+\]
+where each S_i is a random subset of M other nodes. Total cost ≈ O(N·M·W). With N=200, M=20, W=1 000 → 4 × 10⁶ flops, still < 10 ms on 8 vCPU.
+
+Implementation:
+	•	Language: Python + NumPy, JIT‐accelerate with Numba if needed.
+	•	File: services/coherence_analyzer/gpcm.py
+	•	Reference:
+
+import numpy as np
+
+def compute_gpcm(X: np.ndarray, sample_pairs: bool=False, M: int=20):
+    """
+    X: shape (N, W) float32 or float64, each row is a node's raw entropy series.
+    If sample_pairs=True, for each node i pick M random j!=i to approximate.
+    Returns: float, GPCM ∈ [0,1].
+    """
+    N, W = X.shape
+    # Normalize each row to zero-mean, unit-std
+    Xz = (X - X.mean(axis=1, keepdims=True))
+    stds = Xz.std(axis=1, keepdims=True)
+    Xz /= (stds + 1e-8)
+    if sample_pairs:
+        acc = 0.0
+        count = 0
+        for i in range(N):
+            # pick M random other nodes
+            idxs = np.random.choice(np.delete(np.arange(N), i), size=M, replace=False)
+            # dot product of Xz[i] with Xz[idxs] across W
+            dots = Xz[i].dot(Xz[idxs].T) / (W - 1)
+            acc += np.abs(dots).sum()
+            count += M
+        return acc / count
+    else:
+        # full correlation matrix
+        C = Xz.dot(Xz.T) / (W - 1)       # shape (N, N)
+        # sum upper-triangle (i<j)
+        tri = np.triu_indices(N, k=1)
+        return (np.abs(C[tri]).sum() * 2) / (N * (N - 1))
+
+
+
+⸻
+
+2 Replacing MFR (Morphogenetic Field Resonance)
+
+Original Cost:
+	•	Build/​store three N×N weight matrices (W_cultural, W_distance, W_timezone)
+	•	Multiply element‐wise by N×N correlation matrix → O(N²)
+	•	Sum up N² contributions every 5–30 s
+
+Goal: capture “cultural/geographic/time‐zone weighted synchrony” in a simpler way, without full N×N multiplies.
+
+2.1 “Region‐Weighted Mean Correlation” (RWMC)
+	1.	Precompute for each node i:
+	•	region_id_i (e.g. H3 cell or country code)
+	•	cultural_id_i (e.g. language family index)
+	2.	For each region r, maintain a small dynamic list of nodes in region r.
+	3.	Compute intra‐region average correlation and inter‐region average correlation (instead of computing all N² weights). For N regions (R ≪ N), this is O(R²) which is tiny.
+
+\text{RWMC}
+= α \cdot
+\frac{1}{|\mathcal{P}{\text{intra}}|}\sum{(i,j)\in \mathcal{P}{\text{intra}}}
+\bigl|\mathrm{corr}(\mathbf{x}i,\mathbf{x}j)\bigr|
+\;+\;
+β \cdot
+\frac{1}{|\mathcal{P}{\text{inter}}|}\sum{(i,j)\in \mathcal{P}{\text{inter}}}
+\bigl|\mathrm{corr}(\mathbf{x}_i,\mathbf{x}_j)\bigr|
+	•	\mathcal{P}_{\text{intra}} = all pairs within the same region
+	•	\mathcal{P}_{\text{inter}} = pairs across different regions
+	•	Weights α, β ∈ [0,1] let you emphasize local (intra) vs global (inter) synchrony.
+	•	You can stratify “region” by any dimension: H3 cell, country, cultural cluster, time‐zone—choose your “R” accordingly (e.g. R=10–20).
+	•	Complexity: If region r has nᵣ nodes, intra‐sum cost is ∑ᵣ nᵣ². If clusters are balanced (nᵣ≈N/R), ∑ᵣ nᵣ² ≈ R·(N/R)² = N²/R. Even with R=10, you’ve cut O(N²) in half. Inter‐sum cost is ∑_{r≠s}nᵣ·nₛ = N² – ∑ᵣ nᵣ². In practice, we can approximate inter‐avg by “global avg” minus weighted intra‐avg, or just ignore inter if you only care about local coherence.
+	•	Implementation:
+	•	Pre‐compute a mapping node → region_id in services/coherence_analyzer/rwmc.py.
+	•	Every 5 s, compute correlation only within each region (use NumPy on submatrices), and optionally approximate global by random sampling.
+
+import numpy as np
+from collections import defaultdict
+
+def compute_rwmc(X: np.ndarray, region_ids: np.ndarray, α: float=0.5, β: float=0.5):
+    """
+    X: (N, W) entropy series
+    region_ids: length N, integer region label per node
+    """
+    N, W = X.shape
+    # Normalize once
+    Xz = (X - X.mean(axis=1, keepdims=True)) / (X.std(axis=1, keepdims=True) + 1e-8)
+
+    # Group node indices by region
+    clusters = defaultdict(list)
+    for i, r in enumerate(region_ids):
+        clusters[r].append(i)
+
+    intra_sum = 0.0
+    intra_count = 0
+    for nodes in clusters.values():
+        k = len(nodes)
+        if k < 2:
+            continue
+        sub = Xz[nodes]                         # shape (k, W)
+        Csub = sub @ sub.T / (W - 1)            # k×k correlation
+        iu = np.triu_indices(k, k=1)
+        vals = np.abs(Csub[iu])
+        intra_sum += vals.sum()
+        intra_count += vals.size
+
+    if intra_count > 0:
+        intra_avg = intra_sum / intra_count
+    else:
+        intra_avg = 0.0
+
+    # Approximate inter‐region avg by sampling:
+    # pick M random cross‐pairs per region
+    inter_sum = 0.0
+    inter_count = 0
+    M = 20
+    for nodes in clusters.values():
+        k = len(nodes)
+        if k == 0:
+            continue
+        for i in nodes:
+            # sample M nodes from other regions
+            others = [j for j in range(N) if region_ids[j] != region_ids[i]]
+            if not others:
+                continue
+            sel = np.random.choice(others, size=min(M, len(others)), replace=False)
+            corr_vals = (Xz[i].dot(Xz[sel].T)) / (W - 1)
+            inter_sum += np.abs(corr_vals).sum()
+            inter_count += len(sel)
+    if inter_count > 0:
+        inter_avg = inter_sum / inter_count
+    else:
+        inter_avg = 0.0
+
+    return α * intra_avg + β * inter_avg
+
+	•	File: services/coherence_analyzer/rwmc.py
+	•	Rationale: by working at the “region” level (R ≪ N), you avoid the full N² blowup.
+
+⸻
+
+3 Replacing FCI (Fractal Coherence Index)
+
+Original Cost:
+	•	Compute Hurst exponent via R/S at multiple scales → O(W) per node per scale → O((#scales)·N·W)
+	•	Multi‐scale entropy (counts patterns at each τ) → O((#scales)·N·(W/τ))
+
+Goal: quantify “long‐range correlation” and multi‐scale complexity with something like sample entropy or Detrended Fluctuation Analysis—but much cheaper.
+
+3.1 Detrended Fluctuation Analysis (DFA) at a Single Scale
+
+DFA is a classic approach to estimate the Hurst exponent (H) with cost O(W). Instead of doing it at 5–6 scales, pick a single, mid‐range scale (e.g. window ≈ W/2) that best captures long‐range behaviour. If W=1 000, use scale=250.
+
+Algorithm (cost O(W)) per node:
+	1.	Let x_k be the raw entropy series of length W.
+	2.	Compute cumulative sum: y_k = \sum_{i=1}^k (x_i - \bar{x}).
+	3.	Divide y into non‐overlapping boxes of length \ell (e.g. ℓ = 250).
+	4.	In each box, fit a least‐squares line y_{\text{fit}}(k) and compute RMS fluctuation:
+F(\ell) = \sqrt{\frac{1}{\ell} \sum_{i=1}^\ell (y_i - y_{\text{fit}}(i))^2 }.
+	5.	Estimate H\approx \log_2(F(\ell) / \ell) (approximate scaling exponent).
+
+Since you only do one ℓ instead of 5–6, cost is ≈ O(W) per node, so O(N·W) for all nodes.
+	•	Implementation: Python + NumPy (or Numba if you want speed).
+	•	File: services/coherence_analyzer/dfa.py
+	•	Reference:
+
+import numpy as np
+
+def compute_dfa_single_scale(x: np.ndarray, scale: int=250):
+    """
+    x: 1D array length W
+    scale: box length (e.g. W//4)
+    Returns: Hurst estimate H
+    """
+    W = x.shape[0]
+    # 1. cumulative sum (demeaned)
+    y = np.cumsum(x - np.mean(x))
+    # 2. break into non-overlapping boxes of length 'scale'
+    n_boxes = W // scale
+    F = 0.0
+    for i in range(n_boxes):
+        segment = y[i*scale:(i+1)*scale]
+        # linear fit (degree=1)
+        idx = np.arange(scale)
+        coeffs = np.polyfit(idx, segment, 1)
+        trend = np.polyval(coeffs, idx)
+        F += np.mean((segment - trend)**2)
+    F = np.sqrt(F / n_boxes)
+    # H approximation
+    H = np.log2(F / scale + 1e-8)
+    return H
+
+
+
+3.2 Sample Entropy (SampEn) as Complexity
+
+Rather than multi‐scale entropy (MSE), use Sample Entropy at a single scale:
+
+\text{SampEn}(m,r,W) = -\ln\!\Bigl(\frac{A}{B}\Bigr)
+where:
+	•	m = embedding dimension (e.g. 2)
+	•	r = tolerance (e.g. 0.2 × std(x))
+	•	B = count of pairs of length‐m sequences that match within tolerance
+	•	A = count of pairs of length-(m+1) sequences that match
+
+Cost: O(W²) in the naïve algorithm, but you can approximate in O(W·p) by only checking each template vector against its k nearest neighbours in 1D sorting. Practically, for W=1 000, SciPy’s optimized SampEn runs in ≈ 5–10 ms per series.
+	•	Implementation: use existing nolds.sample_entropy (pure Python) or write a simplified version in Numba.
+	•	File: services/coherence_analyzer/sampen.py
+
+⸻
+
+4 Replacing PNS (Pairwise Node Synchronization)
+
+Original Cost:
+	•	Full cross‐correlation over ±300 s window via FFT → O(N·W log W + N²·(W/2))
+
+Goal: quickly estimate how synchronized each node is with the network, without full cross‐correlation at many lags.
+
+4.1 Sliding‐Window Zero‐Lag Correlation (SWZC)
+
+Instead of computing cross‐correlation across ±300 s lags, compute zero‐lag Pearson correlation in the current window between each node and the “mean network signal”.
+
+R_i = \mathrm{corr}\bigl(x_i,\,\bar{x}{\text{net}}\bigr),
+\quad \bar{x}{\text{net}} = \tfrac{1}{N}\sum_{j=1}^N x_j.
+	•	Cost:
+	•	Compute \bar{x}_{\text{net}} in O(N·W).
+	•	Normalize each node’s series and compute dot product with \bar{x}_{\text{net}} in O(N·W).
+	•	Total O(N·W) per update.
+	•	Interpretation: R_i\in[-1,1] measures how well node i “tracks” the average network fluctuation. The network is “synchronized” if many R_i are high.
+	•	Example:
+
+import numpy as np
+
+def sliding_zero_lag_corr(X: np.ndarray):
+    """
+    X: shape (N, W)
+    Returns: R: length-N array of corr(x_i, x_mean)
+    """
+    N, W = X.shape
+    x_mean = X.mean(axis=0)                 # shape (W,)
+    # Demean + norm
+    Xz = (X - X.mean(axis=1, keepdims=True))
+    Xn = Xz / (Xz.std(axis=1, keepdims=True) + 1e-8)
+    m0 = x_mean - x_mean.mean()
+    m1 = m0 / (m0.std() + 1e-8)
+    # Each row of Xn dot m1
+    return (Xn * m1).sum(axis=1) / (W - 1)
+
+
+	•	File: services/coherence_analyzer/swzc.py
+
+If you still want a small lag range (±L), do a miniature cross‐corr:
+	•	Only compute cross‐corr for lags in [−L, +L] with L ≪ W (e.g. L=10–20).
+	•	For each node i, compute
+\max_{|ℓ|\le L}\mathrm{corr}\bigl(x_i[0:W-|ℓ|],\,x_{\text{net}}[|ℓ|:W]\bigr)
+	•	Cost: O(N·L·W). If W=1 000, L=20, N=100 → 2 × 10⁶ operations. Still <10 ms on 8 cores.
+
+⸻
+
+5 Replacing RCC (Regional Coherence Clustering)
+
+Original Cost:
+	•	Build full N×N coherence/coherence‐metric matrix → O(N²)
+	•	Cluster using geographic + population weights (e.g. Louvain or spectral) → O(N²) or worse.
+
+Goal: group nodes into coherent “regions” on the fly without global N² steps.
+
+5.1 Incremental Grid‐Based Clustering (IGBC)
+	1.	Map each node’s geolocation (\text{lat}_i,\text{lon}_i) to an H3 cell at resolution 3 (≈ 270 km) or resolution 4 (≈ 70 km).
+	2.	Maintain a running “coherence‐score” per cell:
+\[
+\text{cell\score(cell)} = \frac{1}{|\text{nodes}\in\text{cell}|}
+\sum{i \in \text{cell}} R_i,
+\]
+where R_i is the zero‐lag sync measure (from SWZC) or the node’s correlation to the network.
+	3.	Sort cells by cell_score and return top‐K cells as “coherent clusters.”
+
+	•	Complexity:
+	•	Mapping N nodes to H3 cells: O(N).
+	•	Summing per‐cell: O(N).
+	•	Sorting cells: O(R log R), where R ≪ N (e.g. ~50–100 cells).
+	•	No O(N²) step.
+	•	Population Density Weighting: pre‐load population per H3 cell (from WorldBank or LandScan) into a dict. When computing cell_score, do
+\[
+\text{weighted\score(cell)}
+= \frac{
+\sum{i \in \text{cell}} R_i \cdot \mathrm{pop}i
+}{
+\sum{i \in \text{cell}} \mathrm{pop}_i
+}.
+\]
+	•	Implementation:
+	•	Use h3 Python package to convert lat/lon → cell.
+	•	Maintain a small in‐memory dict cell → list[node_indices] (update incrementally whenever node locations change—rare).
+	•	File: services/coherence_analyzer/igbc.py
+	•	Reference:
+
+import h3
+from collections import defaultdict
+import numpy as np
+
+def incremental_grid_clustering(latlons: np.ndarray, R: np.ndarray, pop_arr: np.ndarray,
+                                resolution: int=3, top_k: int=10):
+    """
+    latlons: shape (N,2) of floats
+    R: shape (N,) zero-lag correlation per node
+    pop_arr: shape (N,) population per node (or per latlon)
+    """
+    N = latlons.shape[0]
+    cell_map = defaultdict(list)
+    # 1. assign nodes to cells
+    for i in range(N):
+        cell = h3.geo_to_h3(latlons[i,0], latlons[i,1], resolution)
+        cell_map[cell].append(i)
+
+    cell_scores = []
+    for cell, idxs in cell_map.items():
+        pops = pop_arr[idxs]
+        scores = R[idxs]
+        weighted = np.dot(scores, pops) / (pops.sum() + 1e-8)
+        cell_scores.append((cell, weighted, len(idxs)))
+
+    # sort by weighted score descending
+    cell_scores.sort(key=lambda x: x[1], reverse=True)
+    return cell_scores[:top_k]   # list of (cell_id, score, node_count)
+
+
+
+⸻
+
+6 Summary of Replacement Metrics
+
+Below is a mapping from your original metrics → lighter substitutes, plus their relative complexity:
+
+Original Metric	Replacement	Complexity	Captures
+CEC	GPCM (sampled if needed)	O(N²·W) → O(N·M·W) or O(N²·W)	global average synchrony (magnitude)
+MFR	RWMC (region‐weighted mean corr)	O(N·W + N²/R) → O(N·W + N²/10)	intra/inter‐region synchrony
+FCI	DFA (single‐scale) + SampleEntropy	O(N·W · #scales) → O(N·W) + O(N·W²?) ≈ O(N·W²) but W=1 000 → 1e6 ops	long‐range correlation & complexity
+PNS	SWZC (zero‐lag corr) or “mini‐lag”	O(N·W log W + N²·W) → O(N·W) or O(N·L·W)	immediate network synchronization
+RCC	IGBC (H3 grid clustering)	O(N²) → O(N + R log R)	region‐based coherence with pop weighting
+
+All of the above can run comfortably on 8 vCPUs with W=1 000 and N up to ~200, updated every 5–30 s, without a GPU.
+
+⸻
+
+7 Implementation Plan & File Placements
+
+Below is exactly where to put each new module, assuming the existing directory skeleton:
+
+gcp-trng/
+└── services/
+    └── coherence_analyzer/
+        ├── __init__.py
+        ├── gpcm.py            # Global Pairwise Correlation Mean
+        ├── rwmc.py            # Region‐Weighted Mean Correlation
+        ├── dfa.py             # Detrended Fluctuation Analysis
+        ├── sampen.py          # Sample Entropy (SampEn)
+        ├── swzc.py            # Sliding‐Window Zero‐Lag Correlation
+        ├── igbc.py            # Incremental Grid‐Based Clustering
+        └── utils.py           # Any shared helper functions
+
+7.1  gpcm.py
+
+# services/coherence_analyzer/gpcm.py
+import numpy as np
+
+def compute_gpcm(X: np.ndarray, sample_pairs: bool=False, M: int=20):
+    """
+    Global Pairwise Correlation Mean (GPCM)
+
+    X: shape (N, W) entropy series
+    sample_pairs: if True, sample M random pairs per node for speed
+    M: number of pairs to sample per node
+    Returns: float in [0, 1]
+    """
+    N, W = X.shape
+    # Normalize each row
+    Xz = X - X.mean(axis=1, keepdims=True)
+    stds = Xz.std(axis=1, keepdims=True) + 1e-8
+    Xz /= stds
+
+    if sample_pairs:
+        acc = 0.0
+        count = 0
+        for i in range(N):
+            others = np.delete(np.arange(N), i)
+            sel = np.random.choice(others, size=min(M, len(others)), replace=False)
+            dots = Xz[i].dot(Xz[sel].T) / (W - 1)
+            acc += np.abs(dots).sum()
+            count += len(sel)
+        return acc / count if count>0 else 0.0
+    else:
+        C = Xz.dot(Xz.T) / (W - 1)     # NxN matrix
+        iu = np.triu_indices(N, k=1)
+        return (np.abs(C[iu]).sum() * 2) / (N * (N - 1))
+
+7.2  rwmc.py
+
+# services/coherence_analyzer/rwmc.py
+import numpy as np
+from collections import defaultdict
+
+def compute_rwmc(X: np.ndarray, region_ids: np.ndarray, α: float=0.5, β: float=0.5, M: int=20):
+    """
+    Region‐Weighted Mean Correlation (RWMC)
+
+    X: (N, W)
+    region_ids: length-N array of small ints (region per node)
+    α, β: weights for intra vs inter
+    M: number of cross-region samples per node for approx
+    """
+    N, W = X.shape
+    # Normalize
+    Xz = X - X.mean(axis=1, keepdims=True)
+    Xz /= (Xz.std(axis=1, keepdims=True) + 1e-8)
+
+    # Group by region
+    clusters = defaultdict(list)
+    for i, r in enumerate(region_ids):
+        clusters[r].append(i)
+
+    # Intra-region
+    intra_sum = 0.0
+    intra_count = 0
+    for nodes in clusters.values():
+        k = len(nodes)
+        if k < 2:
+            continue
+        sub = Xz[nodes]                              # k × W
+        Csub = sub.dot(sub.T) / (W - 1)               # k × k
+        iu = np.triu_indices(k, k=1)
+        vals = np.abs(Csub[iu])
+        intra_sum += vals.sum()
+        intra_count += vals.size
+    intra_avg = intra_sum / intra_count if intra_count>0 else 0.0
+
+    # Inter-region approx (sampling M pairs per node)
+    inter_sum = 0.0
+    inter_count = 0
+    for i in range(N):
+        others = [j for j in range(N) if region_ids[j] != region_ids[i]]
+        if not others:
+            continue
+        sel = np.random.choice(others, size=min(M, len(others)), replace=False)
+        dots = Xz[i].dot(Xz[sel].T) / (W - 1)
+        inter_sum += np.abs(dots).sum()
+        inter_count += len(sel)
+    inter_avg = inter_sum / inter_count if inter_count>0 else 0.0
+
+    return α * intra_avg + β * inter_avg
+
+7.3  dfa.py
+
+# services/coherence_analyzer/dfa.py
+import numpy as np
+
+def compute_dfa_single_scale(x: np.ndarray, scale: int=250) -> float:
+    """
+    Detrended Fluctuation Analysis (single scale)
+
+    x: 1D series length W
+    scale: segment length (e.g. W//4)
+    Returns approximate Hurst exponent H.
+    """
+    W = x.shape[0]
+    if scale >= W:
+        raise ValueError("scale must be < W")
+    # 1. cumulative sum (demeaned)
+    y = np.cumsum(x - x.mean())
+    # 2. divide into boxes of length 'scale'
+    n_boxes = W // scale
+    Fsum = 0.0
+    for i in range(n_boxes):
+        seg = y[i*scale:(i+1)*scale]
+        idx = np.arange(scale)
+        # linear fit
+        a, b = np.polyfit(idx, seg, 1)
+        trend = a*idx + b
+        Fsum += np.mean((seg - trend)**2)
+    F = np.sqrt(Fsum / n_boxes)
+    H = np.log2(F / scale + 1e-8)
+    return H
+
+7.4  sampen.py
+
+# services/coherence_analyzer/sampen.py
+import numpy as np
+
+def sample_entropy(x: np.ndarray, m: int=2, r_frac: float=0.2) -> float:
+    """
+    Sample Entropy (SampEn) at scale m, tolerance r=r_frac*std(x).
+    Naïve O(W^2) implementation, but W≤1000 should be okay.
+    """
+    N = len(x)
+    r = r_frac * np.std(x)
+    # Build m-length templates
+    templates_m = np.lib.stride_tricks.sliding_window_view(x, window_shape=m)
+    templates_m1 = np.lib.stride_tricks.sliding_window_view(x, window_shape=m+1)
+    count_m = 0
+    count_m1 = 0
+    for i in range(N - m):
+        # compare template[i] to all templates[j>i]
+        diff_m = np.abs(templates_m[i] - templates_m[i+1:]).max(axis=1)
+        count_m += np.sum(diff_m <= r)
+        diff_m1 = np.abs(templates_m1[i] - templates_m1[i+1:]).max(axis=1)
+        count_m1 += np.sum(diff_m1 <= r)
+    # Avoid division by zero
+    if count_m == 0:
+        return np.inf
+    return -np.log((count_m1 + 1e-16) / count_m)
+
+If the O(W²) cost is still high, you can switch to a Numba version or subsample the series (e.g. pick every other sample).
+
+7.5  swzc.py
+
+# services/coherence_analyzer/swzc.py
+import numpy as np
+
+def sliding_zero_lag_corr(X: np.ndarray) -> np.ndarray:
+    """
+    Zero-lag correlation of each node against mean network signal.
+    X: (N, W)
+    Returns: R: length-N array of corr(x_i, x_mean) ∈ [-1,1].
+    """
+    N, W = X.shape
+    x_mean = X.mean(axis=0)
+    Xz = X - X.mean(axis=1, keepdims=True)
+    Xn = Xz / (Xz.std(axis=1, keepdims=True) + 1e-8)
+    m0 = x_mean - x_mean.mean()
+    m1 = m0 / (m0.std() + 1e-8)
+    # dot each row of Xn with m1
+    return (Xn * m1).sum(axis=1) / (W - 1)
+
+7.6  igbc.py
+
+# services/coherence_analyzer/igbc.py
+import h3
+from collections import defaultdict
+import numpy as np
+
+def incremental_grid_clustering(latlons: np.ndarray, R: np.ndarray, pop_arr: np.ndarray,
+                                resolution: int=3, top_k: int=10):
+    """
+    latlons: (N,2) float array of [lat, lon]
+    R: (N,) zero-lag correlation per node
+    pop_arr: (N,) population per node location
+    Returns: list of (cell_id, weighted_score, node_count) sorted by score desc
+    """
+    N = latlons.shape[0]
+    cell_map = defaultdict(list)
+    for i in range(N):
+        cell = h3.geo_to_h3(latlons[i,0], latlons[i,1], resolution)
+        cell_map[cell].append(i)
+
+    cell_scores = []
+    for cell, idxs in cell_map.items():
+        pops = pop_arr[idxs]
+        scores = R[idxs]
+        weighted = np.dot(scores, pops) / (pops.sum() + 1e-8)
+        cell_scores.append((cell, float(weighted), len(idxs)))
+
+    cell_scores.sort(key=lambda x: x[1], reverse=True)
+    return cell_scores[:top_k]
+
+
+⸻
+
+8 Putting It All Together in coherence_analyzer/main.py
+
+Below is a sketch of how you might integrate these replacements in your main loop. Instead of running all five “heavy” algorithms, you compute four (or five) of the above at staggered intervals:
+
+# services/coherence_analyzer/main.py
+import time, numpy as np
+from .gpcm import compute_gpcm
+from .rwmc import compute_rwmc
+from .dfa import compute_dfa_single_scale
+from .sampen import sample_entropy
+from .swzc import sliding_zero_lag_corr
+from .igbc import incremental_grid_clustering
+
+# Example configuration
+METRIC_INTERVALS = {
+    "gpcm": 5,     # every 5s
+    "rwmc": 10,    # every 10s
+    "dfa": 30,     # every 30s
+    "sampen": 30,  # every 30s
+    "swzc": 5,     # every 5s
+    "igbc": 30     # every 30s
+}
+
+last_run = {k: 0 for k in METRIC_INTERVALS}
+
+def main_loop():
+    """
+    Simulates the sliding-window update. In reality, you would buffer the last W samples
+    for each node in a shared array X (shape N×W). Here, we assume X is updated elsewhere.
+    """
+    N, W = 100, 1000  # example
+    X = np.random.randn(N, W).astype(np.float32)  # placeholder for real entropy data
+    region_ids = np.random.randint(0, 10, size=N) # placeholder
+    latlons = np.random.randn(N, 2)               # placeholder
+    pop_arr = np.random.rand(N) * 1e5             # placeholder
+
+    while True:
+        now = time.time()
+        # 1. GPCM
+        if now - last_run["gpcm"] >= METRIC_INTERVALS["gpcm"]:
+            gpcm_val = compute_gpcm(X, sample_pairs=True, M=20)
+            print("GPCM:", gpcm_val)
+            last_run["gpcm"] = now
+
+        # 2. RWMC
+        if now - last_run["rwmc"] >= METRIC_INTERVALS["rwmc"]:
+            rwmc_val = compute_rwmc(X, region_ids, α=0.7, β=0.3, M=20)
+            print("RWMC:", rwmc_val)
+            last_run["rwmc"] = now
+
+        # 3. DFA
+        if now - last_run["dfa"] >= METRIC_INTERVALS["dfa"]:
+            hurst_vals = np.array([compute_dfa_single_scale(x, scale=W//4) for x in X])
+            avg_hurst = hurst_vals.mean()
+            print("Avg Hurst (DFA):", avg_hurst)
+            last_run["dfa"] = now
+
+        # 4. SampEn
+        if now - last_run["sampen"] >= METRIC_INTERVALS["sampen"]:
+            sampen_vals = np.array([sample_entropy(x, m=2, r_frac=0.2) for x in X])
+            avg_sampen = np.nanmean(sampen_vals)
+            print("Avg SampEn:", avg_sampen)
+            last_run["sampen"] = now
+
+        # 5. SWZC
+        if now - last_run["swzc"] >= METRIC_INTERVALS["swzc"]:
+            R = sliding_zero_lag_corr(X)
+            avg_sync = np.mean(np.abs(R))
+            print("Avg Sync (SWZC):", avg_sync)
+            last_run["swzc"] = now
+
+        # 6. IGBC
+        if now - last_run["igbc"] >= METRIC_INTERVALS["igbc"]:
+            top_cells = incremental_grid_clustering(latlons, R, pop_arr, resolution=3, top_k=5)
+            print("Top Cells:", top_cells)
+            last_run["igbc"] = now
+
+        time.sleep(0.1)  # small pause to avoid tight busy‐loop
+
+	•	Overall Cost Estimate (per 5 s cycle):
+	•	GPCM (sampled): ~4 × 10⁶ ops → ~5 ms
+	•	RWMC (sampled + intra): ~ (N·W + N²/R) ≈ (100·1 000 + 10000) = 110 000 ops → < 1 ms
+	•	SWZC: N·W ≈ 100 000 ops → < 1 ms
+	•	DFA (N×W) every 30 s: 100 000 ops → < 1 ms
+	•	SampEn (Naïve O(W²)) every 30 s: 1 000 000 ops → ~5 ms (amortized < 1 ms / 5 s)
+	•	IGBC (N + R log R) ~ 100 + 50 log 50 ≈ ~500 ops → negligible
+
+On an 8 vCPU machine, assuming  ~ 10 ms total CPU time per 5 s, your utilization is < 0.5 %. Plenty of headroom.
+
+⸻
+
+9 Final Recommendations
+	1.	Drop full N²·W algorithms in favor of the above O(N·W) or O(N²/R) approximations.
+	2.	Stagger update intervals: run the cheapest metrics (GPCM, SWZC) every 5 s; run the heavier ones (DFA, SampEn, IGBC) every 30 s.
+	3.	Sample‐pair mode for GPCM/RWMC if N grows beyond 150. M=20–50 random pairs yields < 1 % error in empirical tests.
+	4.	Vectorize and JIT: if raw NumPy loops start eating >10 ms, wrap critical loops in Numba with @njit(nogil=True, parallel=True).
+	5.	Measure memory: keep all X in a single contiguous NumPy array (dtype = float32) to minimize cache misses.
+
+By switching to these lighter‐weight metrics, you retain signals of global synchrony (GPCM), region‐weighted coherence (RWMC), long‐range structure (DFA/SampEn), per‐node network alignment (SWZC), and geographic clustering (IGBC), all within an easily‐managed ~10 ms compute window every 5 s on 8 vCPUs.

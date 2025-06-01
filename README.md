@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🌍 Enhanced Global Consciousness Project (GCP 2.0)</h1>
+  <h1>🌍 Enhanced Global Consciousness Project (GCP 3.0)</h1>
   <p><strong>Fostering global awareness and collective intelligence through technology</strong></p>
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -11,19 +11,19 @@
   
   <br>
   
-  <img src="https://img.shields.io/github/stars/psychon7/GCP2.0?style=social" alt="GitHub stars">
-  <img src="https://img.shields.io/github/forks/psychon7/GCP2.0?style=social" alt="GitHub forks">
-  <img src="https://img.shields.io/github/watchers/psychon7/GCP2.0?style=social" alt="GitHub watchers">
+  <img src="https://img.shields.io/github/stars/psychon7/GCP3.0?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/forks/psychon7/GCP3.0?style=social" alt="GitHub forks">
+  <img src="https://img.shields.io/github/watchers/psychon7/GCP3.0?style=social" alt="GitHub watchers">
   
 </div>
 
 ## 🌍 Vision
 
-The Enhanced Global Consciousness Project (GCP 2.0) is an ambitious open-source initiative aimed at fostering global awareness, interconnectedness, and collective intelligence through technology. Our mission is to create tools and platforms that help humanity understand our shared challenges and work together toward sustainable solutions.
+The Enhanced Global Consciousness Project (GCP 3.0) is an ambitious open-source initiative aimed at fostering global awareness, interconnectedness, and collective intelligence through technology. Our mission is to create tools and platforms that help humanity understand our shared challenges and work together toward sustainable solutions.
 
 ## 📖 Overview
 
-This project builds upon the concept of global consciousness - the idea that human awareness can be measured and enhanced through collective participation and technological innovation. GCP 2.0 represents the next evolution of consciousness research, combining cutting-edge technology with human-centered design to create meaningful impact.
+This project builds upon the concept of global consciousness - the idea that human awareness can be measured and enhanced through collective participation and technological innovation. GCP 3.0 represents the next evolution of consciousness research, combining cutting-edge technology with human-centered design to create meaningful impact.
 
 ### Key Objectives
 
@@ -112,8 +112,8 @@ For more details on specific components like the Edge-Cam Agent, QA Engine, Cohe
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/psychon7/GCP2.0.git
-   cd GCP2.0
+   git clone https://github.com/psychon7/GCP3.0.git
+   cd GCP3.0
    ```
 
 2. **Set up the backend**

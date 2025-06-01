@@ -2,7 +2,7 @@
 
 ## Our Commitment
 
-The Enhanced Global Consciousness Project (GCP 2.0) takes security seriously. We are committed to ensuring the security and privacy of our users, contributors, and the consciousness research data we handle.
+The Enhanced Global Consciousness Project (GCP 3.0) takes security seriously. We are committed to ensuring the security and privacy of our users, contributors, and the consciousness research data we handle.
 
 ## Supported Versions
 
@@ -225,7 +225,7 @@ Our bug bounty program covers:
 
 ## Acknowledgments
 
-We thank the security research community for helping us maintain the security of GCP 2.0. Special thanks to:
+We thank the security research community for helping us maintain the security of GCP 3.0. Special thanks to:
 
 - Security researchers who have responsibly disclosed vulnerabilities
 - Open source security tools and communities

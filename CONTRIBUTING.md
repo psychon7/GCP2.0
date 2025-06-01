@@ -1,6 +1,6 @@
-# Contributing to Enhanced Global Consciousness Project (GCP 2.0)
+# Contributing to Enhanced Global Consciousness Project (GCP 3.0)
 
-First off, thank you for considering contributing to the Enhanced Global Consciousness Project! It's people like you that make GCP 2.0 such a great tool for advancing global consciousness research.
+First off, thank you for considering contributing to the Enhanced Global Consciousness Project! It's people like you that make GCP 3.0 such a great tool for advancing global consciousness research.
 
 ## Table of Contents
 

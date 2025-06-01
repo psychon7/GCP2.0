@@ -1,6 +1,6 @@
 ### **🚀 End-to-End Technical Blueprint**
 
-**Enhanced Global Consciousness Project (GCP 2.0) — CCTV-Based TRNG Network**
+**Enhanced Global Consciousness Project (GCP 3.0) — CCTV-Based TRNG Network**
 
 *Design objective: deliver a production-grade, cost-efficient, single-VPS deployment that can later be shard-scaled to 1 000 + nodes with zero architectural re-writes.*
 
@@ -473,4 +473,4 @@ All WebSocket payloads are < 2 KB; UI renders diff only, ensuring < 5 MB/h ↓ b
 
 ---
 
-Done — the structure above lets you clone ➜ docker compose up and have camera ➜ entropy ➜ metrics ➜ 3-D globe, with spike-to-news correlation ready for GCP-2.0 research runs.
+Done — the structure above lets you clone ➜ docker compose up and have camera ➜ entropy ➜ metrics ➜ 3-D globe, with spike-to-news correlation ready for GCP-3.0 research runs.

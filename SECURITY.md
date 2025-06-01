@@ -41,9 +41,9 @@ We provide security updates for the following versions:
 If you discover a security vulnerability, please report it responsibly:
 
 **🔒 For Security Issues:**
-- **Email**: [security@gcp2.org](mailto:security@gcp2.org)
-- **PGP Key**: Available at [https://gcp2.org/pgp-key.asc](https://gcp2.org/pgp-key.asc)
-- **Bug Bounty**: [HackerOne Program](https://hackerone.com/gcp2) (when available)
+- **Email**: [security@gcp3.org](mailto:security@gcp3.org)
+- **PGP Key**: Available at [https://gcp3.org/pgp-key.asc](https://gcp3.org/pgp-key.asc)
+- **Bug Bounty**: [HackerOne Program](https://hackerone.com/gcp3) (when available)
 
 **❌ Do NOT:**
 - Open a public GitHub issue for security vulnerabilities
@@ -148,8 +148,8 @@ We use the CVSS v3.1 scoring system:
 
 ### Emergency Contacts
 
-- **Security Team Lead**: [security-lead@gcp2.org](mailto:security-lead@gcp2.org)
-- **Incident Response**: [incident@gcp2.org](mailto:incident@gcp2.org)
+- **Security Team Lead**: [security-lead@gcp3.org](mailto:security-lead@gcp3.org)
+- **Incident Response**: [incident@gcp3.org](mailto:incident@gcp3.org)
 - **24/7 Emergency**: [+1-XXX-XXX-XXXX](tel:+1XXXXXXXXXX)
 
 ## Compliance and Certifications
@@ -211,9 +211,9 @@ Our bug bounty program covers:
 
 ### Security Team
 
-- **General Security**: [security@gcp2.org](mailto:security@gcp2.org)
-- **Vulnerability Reports**: [security@gcp2.org](mailto:security@gcp2.org)
-- **Security Questions**: [security-questions@gcp2.org](mailto:security-questions@gcp2.org)
+- **General Security**: [security@gcp3.org](mailto:security@gcp3.org)
+- **Vulnerability Reports**: [security@gcp3.org](mailto:security@gcp3.org)
+- **Security Questions**: [security-questions@gcp3.org](mailto:security-questions@gcp3.org)
 
 ### PGP Keys
 
@@ -237,4 +237,4 @@ We thank the security research community for helping us maintain the security of
 
 **Next Review**: July 2024
 
-For questions about this security policy, please contact [security@gcp2.org](mailto:security@gcp2.org).
+For questions about this security policy, please contact [security@gcp3.org](mailto:security@gcp3.org).

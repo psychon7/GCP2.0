@@ -193,7 +193,7 @@ subscription.subscribe(({ data }) => {
 #### Data Visualization
 
 ```python
-from gcp2 import ConsciousnessAnalyzer
+from gcp3 import ConsciousnessAnalyzer
 
 # Initialize analyzer
 analyzer = ConsciousnessAnalyzer()

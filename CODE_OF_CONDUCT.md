@@ -66,7 +66,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
-[conduct@gcp2.org](mailto:conduct@gcp2.org).
+[conduct@gcp3.org](mailto:conduct@gcp3.org).
 
 All complaints will be reviewed and investigated promptly and fairly.
 
@@ -144,8 +144,8 @@ As a project focused on consciousness research, we hold ourselves to additional 
 
 If you experience or witness unacceptable behavior, please report it by:
 
-1. **Email**: [conduct@gcp2.org](mailto:conduct@gcp2.org)
-2. **Anonymous Form**: [Report Form](https://forms.gcp2.org/conduct-report)
+1. **Email**: [conduct@gcp3.org](mailto:conduct@gcp3.org)
+2. **Anonymous Form**: [Report Form](https://forms.gcp3.org/conduct-report)
 3. **Direct Message**: Contact any community leader on Discord
 
 When reporting, please include:
@@ -172,16 +172,16 @@ Our community leaders are committed to:
 
 ### Current Community Leaders
 
-- **Project Lead**: [Name] - [email@gcp2.org]
-- **Community Manager**: [Name] - [community@gcp2.org]
-- **Research Ethics Officer**: [Name] - [ethics@gcp2.org]
+- **Project Lead**: [Name] - [email@gcp3.org]
+- **Community Manager**: [Name] - [community@gcp3.org]
+- **Research Ethics Officer**: [Name] - [ethics@gcp3.org]
 
 ## Resources
 
 ### Support Resources
 - **Mental Health**: If discussions about consciousness research affect your mental health, please reach out to local mental health resources
-- **Technical Support**: [help@gcp2.org](mailto:help@gcp2.org)
-- **Research Questions**: [research@gcp2.org](mailto:research@gcp2.org)
+- **Technical Support**: [help@gcp3.org](mailto:help@gcp3.org)
+- **Research Questions**: [research@gcp3.org](mailto:research@gcp3.org)
 
 ### Educational Resources
 - [Inclusive Language Guide](docs/inclusive-language.md)
@@ -211,4 +211,4 @@ For answers to common questions about this code of conduct, see the FAQ at
 
 **Last Updated**: January 2024
 
-**Contact**: For questions about this Code of Conduct, please email [conduct@gcp2.org](mailto:conduct@gcp2.org).
+**Contact**: For questions about this Code of Conduct, please email [conduct@gcp3.org](mailto:conduct@gcp3.org).

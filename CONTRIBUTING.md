@@ -16,7 +16,7 @@ First off, thank you for considering contributing to the Enhanced Global Conscio
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@gcp2.org](mailto:conduct@gcp2.org).
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@gcp3.org](mailto:conduct@gcp3.org).
 
 ## Getting Started
 
@@ -327,8 +327,8 @@ We use labels to categorize issues:
 ### Getting Help
 
 - Check existing [issues](https://github.com/ORIGINAL_OWNER/enhanced-global-consciousness/issues) and [discussions](https://github.com/ORIGINAL_OWNER/enhanced-global-consciousness/discussions)
-- Join our [Discord server](https://discord.gg/gcp2)
-- Email us at [help@gcp2.org](mailto:help@gcp2.org)
+- Join our [Discord server](https://discord.gg/gcp3)
+- Email us at [help@gcp3.org](mailto:help@gcp3.org)
 
 ### Recognition
 
@@ -351,16 +351,16 @@ We recognize contributors in several ways:
 ### Learning Resources
 
 - [Consciousness Research Papers](docs/research.md)
-- [Technical Blog Posts](https://blog.gcp2.org)
-- [Video Tutorials](https://youtube.com/gcp2project)
+- [Technical Blog Posts](https://blog.gcp3.org)
+- [Video Tutorials](https://youtube.com/gcp3project)
 
 ## Questions?
 
 Don't hesitate to ask questions! We're here to help:
 
 - Open a [GitHub Discussion](https://github.com/ORIGINAL_OWNER/enhanced-global-consciousness/discussions)
-- Join our [Discord](https://discord.gg/gcp2)
-- Email us at [contributors@gcp2.org](mailto:contributors@gcp2.org)
+- Join our [Discord](https://discord.gg/gcp3)
+- Email us at [contributors@gcp3.org](mailto:contributors@gcp3.org)
 
 ---
 

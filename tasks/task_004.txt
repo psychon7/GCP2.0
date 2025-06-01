@@ -1,0 +1,43 @@
+# Task ID: 4
+# Title: GPU-accelerated Coherence Metrics
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Implement GPU-accelerated algorithms for computing coherence metrics (CEC, PNS, FCI, MFR, RCC)
+# Details:
+Develop CUDA/CuPy implementations of coherence metrics including Cross-Entropy Correlation (CEC), Phase-Normalized Spectra (PNS), Fractal Coherence Index (FCI), Multi-Fractal Residual (MFR), and Relative Complexity Coefficient (RCC). Metrics should be computed on 5-second sliding windows and achieve performance targets on an 8vCPU VPS.
+
+# Test Strategy:
+Verify that metrics are computed and updated every 5 seconds, written to TimescaleDB, and transmitted to UI via WebSockets. Ensure CPU usage remains <70% on 8vCPU system.
+
+# Subtasks:
+## 1. Implement GPU-accelerated Cross-Entropy Correlation (CEC) and Phase-Normalized Spectra (PNS) [pending]
+### Dependencies: None
+### Description: Develop CUDA/CuPy implementations for the CEC and PNS coherence metrics that can process 5-second sliding windows of data efficiently on GPU.
+### Details:
+Create a module that implements CEC which measures the mutual information between signals, and PNS which normalizes phase relationships. Use CuPy for array operations and CUDA kernels for performance-critical sections. Implement sliding window functionality with appropriate overlap handling. Ensure the implementation can handle variable input sizes and sampling rates.
+
+## 2. Implement GPU-accelerated Fractal Coherence Index (FCI) [pending]
+### Dependencies: 4.1
+### Description: Develop a CUDA/CuPy implementation for the Fractal Coherence Index that quantifies the fractal relationships between signals across frequency bands.
+### Details:
+Create functions to compute fractal dimensions across multiple scales using GPU parallelization. Implement wavelet decomposition on GPU for multi-scale analysis. Optimize memory transfers between host and device. Use shared memory where appropriate to reduce global memory access. Implement the core FCI algorithm that combines fractal dimensions across scales.
+
+## 3. Implement GPU-accelerated Multi-Fractal Residual (MFR) and Relative Complexity Coefficient (RCC) [pending]
+### Dependencies: 4.2
+### Description: Develop CUDA/CuPy implementations for MFR which analyzes residual patterns after fractal component removal, and RCC which quantifies relative signal complexity.
+### Details:
+For MFR, implement GPU functions to extract fractal components and analyze residual patterns. For RCC, develop parallel algorithms to compute complexity measures and their relative relationships. Optimize for parallel execution on GPU architecture. Use appropriate memory management techniques to handle large datasets efficiently.
+
+## 4. Create Unified API and Sliding Window Processing Framework [pending]
+### Dependencies: 4.1, 4.2, 4.3
+### Description: Develop a unified API for all coherence metrics with a common sliding window processing framework that efficiently manages GPU resources.
+### Details:
+Design a consistent interface for all metrics. Implement efficient sliding window management that minimizes redundant computations and memory transfers. Create a resource management system that optimizes GPU memory usage across metrics. Implement batch processing capabilities to maximize GPU utilization. Add configuration options for window size, overlap, and other parameters.
+
+## 5. Optimize Performance and Validate Against Targets [pending]
+### Dependencies: 4.4
+### Description: Optimize the GPU implementations to meet performance targets on an 8vCPU VPS and validate the accuracy of all metrics against reference implementations.
+### Details:
+Profile the implementations to identify bottlenecks. Optimize kernel configurations (block/grid sizes) for the target hardware. Implement memory access pattern optimizations. Reduce host-device transfers by keeping intermediate results on GPU. Implement mixed precision where appropriate to improve performance. Create comprehensive validation suite comparing results against reference implementations.
+

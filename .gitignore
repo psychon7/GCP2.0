@@ -25,5 +25,6 @@ node_modules/
 .DS_Store
 
 # Task files
-tasks.json
-tasks/ 
+# Commenting out for Taskmaster
+# tasks.json
+# tasks/ 

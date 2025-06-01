@@ -1,0 +1,43 @@
+# Task ID: 7
+# Title: FastAPI/GraphQL Gateway
+# Status: pending
+# Dependencies: 1, 3, 4, 5, 6
+# Priority: medium
+# Description: Develop an API gateway with FastAPI and GraphQL integration
+# Details:
+Implement a gateway service using FastAPI with Ariadne GraphQL integration and JWT authentication. The gateway should provide access to all system functionality, including camera management, metrics, experiments, and events.
+
+# Test Strategy:
+Verify that the API provides access to all system functionality with proper authentication. Test query performance and WebSocket message delivery.
+
+# Subtasks:
+## 1. Set up FastAPI project structure with Ariadne GraphQL [pending]
+### Dependencies: None
+### Description: Initialize the FastAPI project with proper directory structure and integrate Ariadne for GraphQL support
+### Details:
+Create a new FastAPI project with appropriate directory structure (routes, schemas, resolvers, middleware). Set up Ariadne GraphQL integration with FastAPI. Configure CORS, logging, and basic error handling. Create a health check endpoint. Set up dependency injection system for services.
+
+## 2. Implement JWT authentication middleware [pending]
+### Dependencies: 7.1
+### Description: Create JWT authentication and authorization middleware for securing API endpoints
+### Details:
+Implement JWT token generation, validation, and refresh mechanisms. Create middleware for authenticating requests. Set up role-based access control for different API operations. Implement user context extraction from JWT tokens. Create authentication-related GraphQL mutations (login, refresh token).
+
+## 3. Develop GraphQL schema and resolvers for camera management [pending]
+### Dependencies: 7.2
+### Description: Create GraphQL types, queries, mutations, and resolvers for camera management functionality
+### Details:
+Define GraphQL types for cameras and related entities. Implement queries for retrieving camera information, status, and configuration. Create mutations for camera operations (add, update, delete, configure). Implement resolvers that connect to the appropriate microservices. Handle error cases and proper response formatting.
+
+## 4. Implement GraphQL schema and resolvers for metrics and experiments [pending]
+### Dependencies: 7.2
+### Description: Create GraphQL types, queries, mutations, and resolvers for metrics collection and experiment management
+### Details:
+Define GraphQL types for metrics, experiments, and related entities. Implement queries for retrieving metrics data with filtering and pagination. Create mutations for experiment management (create, update, delete, start, stop). Implement resolvers that connect to the appropriate microservices. Add support for metrics aggregation and time-series data retrieval.
+
+## 5. Develop event system integration and API documentation [pending]
+### Dependencies: 7.3, 7.4
+### Description: Integrate the event system with GraphQL subscriptions and create comprehensive API documentation
+### Details:
+Implement GraphQL subscriptions for real-time event notifications. Create resolvers for event queries and subscriptions. Set up WebSocket support for subscription handling. Generate comprehensive API documentation using tools like GraphQL Playground or GraphiQL. Create usage examples and authentication guides. Implement rate limiting and request validation.
+

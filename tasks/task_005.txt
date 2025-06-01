@@ -1,0 +1,43 @@
+# Task ID: 5
+# Title: Event Correlation Service
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Develop a service that correlates entropy spikes with geo-located news/sports/events
+# Details:
+Create a service that detects significant spikes (Z>3) in coherence metrics and correlates them with real-world events using NewsAPI, API-Sports, PredictHQ, and local Llama-3 for enrichment. The service should return relevant headlines or events with geo-match confidence.
+
+# Test Strategy:
+Verify that the service returns at least one headline or sports event with geo-match confidence ≥0.7 within 30 seconds after a spike is detected.
+
+# Subtasks:
+## 1. Implement Coherence Spike Detection Module [pending]
+### Dependencies: None
+### Description: Create a module that analyzes coherence metrics data streams and identifies significant spikes where Z-score exceeds 3.
+### Details:
+Develop a statistical analysis component that processes incoming coherence metrics, calculates rolling Z-scores, and flags significant anomalies. Include configurable thresholds, time window parameters, and spike classification logic. The module should output spike events with timestamp, location, intensity, and confidence metrics.
+
+## 2. Integrate External Event APIs [pending]
+### Dependencies: None
+### Description: Develop adapters for NewsAPI, API-Sports, and PredictHQ to fetch geo-located events and news articles.
+### Details:
+Create a unified API client interface with specific implementations for each provider. Each adapter should handle authentication, rate limiting, error handling, and data normalization. Implement geo-radius search capabilities and temporal filtering to match the timeframe of detected spikes. Store API responses in a standardized event format with source attribution.
+
+## 3. Develop Llama-3 Event Enrichment Pipeline [pending]
+### Dependencies: 5.2
+### Description: Create a local Llama-3 based enrichment service that enhances event data with additional context and relevance scoring.
+### Details:
+Set up a local Llama-3 inference endpoint optimized for low latency. Develop prompts that extract key information from raw event data, generate relevance scores, and provide additional context. Implement a caching mechanism to avoid redundant LLM calls. The pipeline should handle batched processing of events and maintain provenance of AI-generated content.
+
+## 4. Build Event-Spike Correlation Engine [pending]
+### Dependencies: 5.1, 5.3
+### Description: Develop the core correlation logic that matches detected coherence spikes with potential causal events based on spatiotemporal proximity and relevance.
+### Details:
+Implement a correlation algorithm that considers geographic distance, temporal alignment, event magnitude, and semantic relevance. Use configurable weighting factors for each dimension. The engine should calculate a composite correlation score for each spike-event pair and rank potential matches. Include confidence intervals and uncertainty quantification in the output.
+
+## 5. Create API and Reporting Interface [pending]
+### Dependencies: 5.4
+### Description: Develop a REST API and reporting interface for the correlation service that allows querying of spike-event correlations and generates detailed reports.
+### Details:
+Implement a RESTful API with endpoints for querying recent correlations, searching historical data, and triggering on-demand analysis. Create structured response formats with correlation details, confidence metrics, and supporting evidence. Develop a reporting module that generates human-readable summaries and visualizations of correlations. Include authentication, rate limiting, and comprehensive logging.
+

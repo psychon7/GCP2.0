@@ -1,0 +1,43 @@
+# Task ID: 8
+# Title: Next.js + Three.js/WebGPU Dashboard
+# Status: pending
+# Dependencies: 7
+# Priority: high
+# Description: Develop a real-time 3D globe dashboard for visualizing entropy network and metrics
+# Details:
+Create a modern web dashboard using Next.js, React, Three.js/WebGPU that renders a real-time 3D globe visualization of the entropy network. Node spheres should have size proportional to quality and color representing coherence metrics. Implement drill-down capabilities for city-level metrics.
+
+# Test Strategy:
+Verify that the globe refreshes within 5s of updates and maintains FPS ≥55 on M1/M3 laptops at 1080p resolution. Test drill-down functionality and data visualization accuracy.
+
+# Subtasks:
+## 1. Set up Next.js project with Three.js/WebGPU integration [pending]
+### Dependencies: None
+### Description: Initialize a Next.js project with TypeScript and integrate Three.js with WebGPU renderer support. Configure the project structure and essential dependencies.
+### Details:
+Create a new Next.js project using `create-next-app` with TypeScript support. Install Three.js and necessary WebGPU extensions. Set up project folders for components, hooks, and utilities. Configure environment variables for API endpoints. Create a basic layout component with a canvas element for the 3D rendering.
+
+## 2. Implement 3D globe model with shader materials [pending]
+### Dependencies: 8.1
+### Description: Create a high-performance 3D globe model using Three.js with custom shader materials for Earth representation, including texture mapping and atmosphere effects.
+### Details:
+Develop a Globe class that extends Three.js Object3D. Implement Earth texture mapping with high-resolution textures. Create custom GLSL shaders for realistic atmosphere glow and cloud layers. Optimize the globe rendering for WebGPU performance. Add rotation controls and smooth animation for globe interaction.
+
+## 3. Develop data visualization layer for network nodes [pending]
+### Dependencies: 8.2
+### Description: Create a visualization layer that renders network nodes as spheres on the globe with dynamic sizing and coloring based on quality and coherence metrics.
+### Details:
+Implement a NodeVisualizer class that converts geographic coordinates to 3D positions on the globe. Create instanced mesh rendering for efficient node visualization. Develop a color mapping system for coherence metrics using a custom color scale. Implement dynamic sizing of node spheres based on quality metrics. Add hover effects and selection highlighting for nodes.
+
+## 4. Build real-time data fetching and update system [pending]
+### Dependencies: 8.3
+### Description: Implement a real-time data fetching system using React hooks and context to update the globe visualization with live network metrics.
+### Details:
+Create a custom React hook for fetching network data from the API. Implement WebSocket connection for real-time updates. Develop a data transformation layer to convert API responses to visualization-ready formats. Create a React context provider for sharing network state across components. Implement efficient update mechanisms to minimize re-renders while maintaining real-time visualization.
+
+## 5. Implement drill-down UI for city-level metrics [pending]
+### Dependencies: 8.3, 8.4
+### Description: Create an interactive UI system that allows users to drill down into city-level metrics when selecting nodes on the globe.
+### Details:
+Develop a ray-casting system for accurate node selection on the globe. Create animated camera transitions to zoom into selected regions. Implement a metrics panel component that displays detailed city-level data. Design and implement filtering controls for exploring different metrics. Add breadcrumb navigation for drill-down history. Ensure responsive layout that works well with the 3D visualization.
+

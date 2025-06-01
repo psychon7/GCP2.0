@@ -1,0 +1,687 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Camera Management Module",
+      "status": "pending",
+      "priority": "high",
+      "description": "Develop a Camera Management service that handles discovery, validation, and health monitoring of public camera streams",
+      "details": "Implement a Python-based service that discovers, validates, and maintains a healthy pool of at least 100 public camera streams. Core functionality includes discovery workers for sources (DOT, EarthCam, Insecam, Shodan), benchmark workers to validate stream quality, entropy quality testing, health monitoring, and a FastAPI server for camera endpoint exposure.",
+      "testStrategy": "Validate that the service maintains at least 100 active cameras with ≥80% availability and geographic diversity. Verify camera benchmarking completes in <30s per camera.",
+      "dependencies": [],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Camera Stream Discovery Workers",
+          "description": "Create worker modules that discover public camera streams from multiple sources including DOT, EarthCam, Insecam, and Shodan.",
+          "dependencies": [],
+          "details": "Develop a modular discovery system with separate worker classes for each source (DOTDiscoveryWorker, EarthCamDiscoveryWorker, etc.). Each worker should implement a common interface with methods for authentication (if needed), search, and stream URL extraction. Use aiohttp for asynchronous HTTP requests to maximize throughput. Store discovered stream URLs in a database with source metadata, timestamp, and initial status flags.",
+          "status": "pending",
+          "testStrategy": "Unit test each discovery worker with mock responses. Integration tests should verify proper database storage and handling of rate limits."
+        },
+        {
+          "id": 2,
+          "title": "Develop Stream Validation and Benchmarking System",
+          "description": "Create a validation system that tests discovered camera streams for accessibility, quality, and usability metrics.",
+          "dependencies": [
+            1
+          ],
+          "details": "Implement a StreamValidator class using OpenCV to connect to streams and validate them. Measure key metrics: connection success rate, latency, frame rate, resolution, and stream stability. Create an entropy-based quality assessment algorithm to evaluate image clarity and usefulness. Use a worker pool pattern to process multiple validations concurrently. Update the database with validation results and quality scores.",
+          "status": "pending",
+          "testStrategy": "Test with a diverse set of known working and broken streams. Measure validation accuracy and performance under load."
+        },
+        {
+          "id": 3,
+          "title": "Build Health Monitoring and Maintenance System",
+          "description": "Develop a health monitoring system that regularly checks camera stream availability and maintains a healthy pool of working streams.",
+          "dependencies": [
+            2
+          ],
+          "details": "Create a HealthMonitor class that periodically checks stream health using the validation system. Implement exponential backoff for failed streams and prioritization logic to maintain at least 100 healthy streams. Design a maintenance scheduler that balances monitoring frequency based on stream reliability history. Implement automatic pruning of consistently failing streams and prioritized discovery to replace them.",
+          "status": "pending",
+          "testStrategy": "Test with simulated stream failures to verify recovery mechanisms. Verify the system maintains the minimum required number of healthy streams over time."
+        },
+        {
+          "id": 4,
+          "title": "Create Database Models and Storage Layer",
+          "description": "Design and implement the database schema and storage layer for camera stream metadata, validation results, and health status.",
+          "dependencies": [
+            1,
+            2,
+            3
+          ],
+          "details": "Use SQLAlchemy to create models for CameraStream, ValidationResult, and HealthStatus. Implement repository pattern classes (StreamRepository, ValidationRepository) that handle database operations. Design indexes for efficient querying by location, quality score, and health status. Implement data retention policies for historical validation data. Create migration scripts for schema evolution.",
+          "status": "pending",
+          "testStrategy": "Unit test repositories with an in-memory SQLite database. Test migrations and verify performance of common queries with a representative dataset size."
+        },
+        {
+          "id": 5,
+          "title": "Develop FastAPI Server for Camera Stream Endpoints",
+          "description": "Create a REST API server that exposes endpoints for camera stream discovery, filtering, and status information.",
+          "dependencies": [
+            4
+          ],
+          "details": "Implement a FastAPI application with endpoints for: listing available streams with filtering options (by location, quality, status), retrieving detailed stream information, triggering validation for specific streams, and providing health metrics of the overall system. Implement pagination for large result sets, request validation, proper error handling, and API documentation using OpenAPI. Add authentication middleware for secure access to management endpoints.",
+          "status": "pending",
+          "testStrategy": "Write API tests for each endpoint using pytest and the FastAPI test client. Test pagination, filtering, error cases, and authentication requirements."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Edge Entropy Extraction Agent",
+      "status": "pending",
+      "priority": "high",
+      "description": "Develop a Rust-based agent that pulls frames from camera feeds and extracts entropy via SHA-3 512-bit hash digests",
+      "details": "Implement a high-performance Rust agent that pulls frames from cameras at 1-30 FPS, processes them for entropy, and outputs SHA-3 512-bit hash samples. The agent should achieve <100ms latency from frame capture to hash digest delivery via NATS.",
+      "testStrategy": "Verify that hash digests arrive via NATS topic 'entropy.raw.<id>' within 100ms after frame capture. Ensure entropy extraction meets the target of ≥256 bits/node/sec with NIST SP-800-22 pass rate ≥99%.",
+      "dependencies": [
+        1
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Camera Frame Capture Module",
+          "description": "Create a Rust module that can connect to and pull frames from camera feeds at configurable frame rates (1-30 FPS).",
+          "dependencies": [],
+          "details": "Use the `v4l` (Video4Linux) or similar crates for Linux camera access, or platform-specific alternatives. Implement a configurable frame rate limiter to control capture frequency. Design the module to handle multiple camera sources and expose a clean API that returns frame data as bytes. Include error handling for camera disconnections and permission issues.",
+          "status": "pending",
+          "testStrategy": "Test with mock camera devices and real hardware. Verify frame capture rates match configuration and measure timing consistency."
+        },
+        {
+          "id": 2,
+          "title": "Develop Frame Processing Pipeline",
+          "description": "Create a processing pipeline that prepares captured frames for entropy extraction by applying necessary transformations.",
+          "dependencies": [
+            1
+          ],
+          "details": "Implement frame preprocessing including optional resizing, grayscale conversion, and noise filtering to optimize for entropy extraction. Use Rust image processing libraries like `image` crate. Design the pipeline to be configurable and efficient, with minimal memory allocations. Consider using parallel processing for performance optimization.",
+          "status": "pending",
+          "testStrategy": "Benchmark processing time with various frame sizes and transformations. Verify output consistency and quality."
+        },
+        {
+          "id": 3,
+          "title": "Implement SHA-3 Entropy Extraction",
+          "description": "Create an entropy extraction module that applies SHA-3 512-bit hashing to processed frames.",
+          "dependencies": [
+            2
+          ],
+          "details": "Use the `sha3` crate or RustCrypto libraries for SHA-3 implementation. Design the module to efficiently process frame data and generate 512-bit hash digests. Implement options for extracting entropy from specific regions of frames or applying additional entropy concentration techniques before hashing. Optimize for performance to minimize latency.",
+          "status": "pending",
+          "testStrategy": "Verify hash output format correctness. Test entropy quality using statistical test suites. Benchmark hashing performance."
+        },
+        {
+          "id": 4,
+          "title": "Develop NATS Integration for Hash Delivery",
+          "description": "Implement a NATS client module that publishes extracted entropy hash digests with minimal latency.",
+          "dependencies": [
+            3
+          ],
+          "details": "Use the `async-nats` crate for NATS integration. Implement asynchronous publishing of hash digests to configurable NATS subjects. Include connection management, reconnection logic, and error handling. Design for minimal latency between hash generation and publication. Add configurable options for message format and metadata inclusion.",
+          "status": "pending",
+          "testStrategy": "Test with local and remote NATS servers. Measure end-to-end latency from hash generation to successful publication. Verify message delivery reliability under various network conditions."
+        },
+        {
+          "id": 5,
+          "title": "Create Main Agent with Configuration and Monitoring",
+          "description": "Develop the main agent application that integrates all components with configuration, monitoring, and performance optimization.",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Implement a configurable agent that integrates all modules. Create a configuration system supporting file-based and environment variable configuration. Add performance monitoring to track latency at each stage of the pipeline. Implement graceful shutdown and resource cleanup. Optimize for overall performance to achieve <100ms end-to-end latency. Include logging and optional metrics exposure via Prometheus or similar.",
+          "status": "pending",
+          "testStrategy": "Conduct end-to-end testing of the complete agent. Measure and optimize latency across the entire pipeline. Test with various configurations and under different load conditions."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Quality Assurance Pipeline",
+      "status": "pending",
+      "priority": "high",
+      "description": "Develop a QA service for validating and scoring entropy samples",
+      "details": "Implement a service that runs statistical tests (NIST subset, ApEn, χ², auto-correlation) on entropy samples, scoring each on a 0-100 scale. Flagging mechanism for nodes when rolling score falls below threshold for a defined period.",
+      "testStrategy": "Verify that nodes are flagged when rolling score is <70 for 10s. Confirm that the QA pipeline can process samples within the system's end-to-end latency budget.",
+      "dependencies": [
+        2
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Core Statistical Test Framework",
+          "description": "Create the foundation for statistical testing by implementing the core test framework that will run NIST subset tests, ApEn, χ², and auto-correlation on entropy samples.",
+          "dependencies": [],
+          "details": "Develop a modular framework that can execute multiple statistical tests on entropy data. Create abstract interfaces for test implementations, a test runner to execute multiple tests in sequence, and data structures to store test results. Include configuration options for test parameters and thresholds. Use a plugin architecture to allow easy addition of new tests in the future.",
+          "status": "pending",
+          "testStrategy": "Unit test each statistical test implementation with known entropy samples that have predetermined expected results. Verify the test runner correctly executes all tests and aggregates results."
+        },
+        {
+          "id": 2,
+          "title": "Implement Individual Statistical Tests",
+          "description": "Implement the specific statistical tests required for entropy validation: NIST subset tests, Approximate Entropy (ApEn), Chi-Square (χ²), and auto-correlation tests.",
+          "dependencies": [
+            1
+          ],
+          "details": "For each test: 1) Research and document the mathematical basis, 2) Implement the algorithm according to established standards, 3) Optimize for performance with large entropy samples, 4) Add proper error handling, 5) Document input requirements and output interpretations. Ensure each test returns standardized result objects that can be used by the scoring system.",
+          "status": "pending",
+          "testStrategy": "Test each implementation against reference implementations or published test vectors. Include edge cases such as completely random data, completely non-random data, and borderline cases."
+        },
+        {
+          "id": 3,
+          "title": "Develop Scoring System",
+          "description": "Create a scoring system that converts the results of multiple statistical tests into a normalized 0-100 quality score for each entropy sample.",
+          "dependencies": [
+            2
+          ],
+          "details": "Design a weighted scoring algorithm that considers the results of all tests. Define the relative importance of each test and how they contribute to the final score. Implement normalization functions to convert raw test results to comparable scales. Create a configurable weighting system that can be adjusted based on specific entropy quality requirements. Document the scoring methodology thoroughly for transparency.",
+          "status": "pending",
+          "testStrategy": "Verify scoring with samples of known quality. Test edge cases (perfect entropy, completely predictable patterns) to ensure they score appropriately at the extremes. Validate that small changes in entropy quality produce appropriate changes in scores."
+        },
+        {
+          "id": 4,
+          "title": "Implement Node Monitoring and Flagging System",
+          "description": "Develop a system to track entropy quality scores over time for each node and flag nodes when their rolling average score falls below a defined threshold for a specified period.",
+          "dependencies": [
+            3
+          ],
+          "details": "Create a persistent storage solution to maintain historical score data for each node. Implement a rolling average calculation with configurable time windows. Develop a flagging mechanism with configurable thresholds and duration parameters. Include notification capabilities when nodes are flagged or return to acceptable quality levels. Design an administrative interface to view node status and manually override flags if necessary.",
+          "status": "pending",
+          "testStrategy": "Simulate node score patterns that should trigger flags and verify correct flagging behavior. Test edge cases around the threshold boundaries. Verify that historical data is correctly maintained and that rolling averages are calculated accurately."
+        },
+        {
+          "id": 5,
+          "title": "Create API and Integration Points",
+          "description": "Develop the service API and integration points to allow the QA pipeline to receive entropy samples, return quality scores, and integrate with the broader system.",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Design and implement RESTful API endpoints for submitting entropy samples for testing, retrieving test results and scores, and querying node status. Create a message queue consumer for asynchronous processing of samples. Implement authentication and authorization for API access. Develop client libraries or SDKs for common languages to facilitate integration. Document the API thoroughly with OpenAPI/Swagger specifications.",
+          "status": "pending",
+          "testStrategy": "Perform integration testing with mock clients. Test API performance under load. Verify correct handling of malformed requests, authentication failures, and other error conditions. Test end-to-end flows from sample submission to score calculation and node flagging."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "GPU-accelerated Coherence Metrics",
+      "status": "pending",
+      "priority": "high",
+      "description": "Implement GPU-accelerated algorithms for computing coherence metrics (CEC, PNS, FCI, MFR, RCC)",
+      "details": "Develop CUDA/CuPy implementations of coherence metrics including Cross-Entropy Correlation (CEC), Phase-Normalized Spectra (PNS), Fractal Coherence Index (FCI), Multi-Fractal Residual (MFR), and Relative Complexity Coefficient (RCC). Metrics should be computed on 5-second sliding windows and achieve performance targets on an 8vCPU VPS.",
+      "testStrategy": "Verify that metrics are computed and updated every 5 seconds, written to TimescaleDB, and transmitted to UI via WebSockets. Ensure CPU usage remains <70% on 8vCPU system.",
+      "dependencies": [
+        3
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement GPU-accelerated Cross-Entropy Correlation (CEC) and Phase-Normalized Spectra (PNS)",
+          "description": "Develop CUDA/CuPy implementations for the CEC and PNS coherence metrics that can process 5-second sliding windows of data efficiently on GPU.",
+          "dependencies": [],
+          "details": "Create a module that implements CEC which measures the mutual information between signals, and PNS which normalizes phase relationships. Use CuPy for array operations and CUDA kernels for performance-critical sections. Implement sliding window functionality with appropriate overlap handling. Ensure the implementation can handle variable input sizes and sampling rates.",
+          "status": "pending",
+          "testStrategy": "Compare results against CPU implementations for accuracy. Benchmark performance on 8vCPU VPS with various dataset sizes. Test with synthetic data having known coherence properties."
+        },
+        {
+          "id": 2,
+          "title": "Implement GPU-accelerated Fractal Coherence Index (FCI)",
+          "description": "Develop a CUDA/CuPy implementation for the Fractal Coherence Index that quantifies the fractal relationships between signals across frequency bands.",
+          "dependencies": [
+            1
+          ],
+          "details": "Create functions to compute fractal dimensions across multiple scales using GPU parallelization. Implement wavelet decomposition on GPU for multi-scale analysis. Optimize memory transfers between host and device. Use shared memory where appropriate to reduce global memory access. Implement the core FCI algorithm that combines fractal dimensions across scales.",
+          "status": "pending",
+          "testStrategy": "Validate results against reference CPU implementation. Test with signals having known fractal properties. Measure computation time for different window sizes."
+        },
+        {
+          "id": 3,
+          "title": "Implement GPU-accelerated Multi-Fractal Residual (MFR) and Relative Complexity Coefficient (RCC)",
+          "description": "Develop CUDA/CuPy implementations for MFR which analyzes residual patterns after fractal component removal, and RCC which quantifies relative signal complexity.",
+          "dependencies": [
+            2
+          ],
+          "details": "For MFR, implement GPU functions to extract fractal components and analyze residual patterns. For RCC, develop parallel algorithms to compute complexity measures and their relative relationships. Optimize for parallel execution on GPU architecture. Use appropriate memory management techniques to handle large datasets efficiently.",
+          "status": "pending",
+          "testStrategy": "Compare against CPU implementations for accuracy. Test with synthetic signals of varying complexity. Benchmark performance with different window sizes and overlap configurations."
+        },
+        {
+          "id": 4,
+          "title": "Create Unified API and Sliding Window Processing Framework",
+          "description": "Develop a unified API for all coherence metrics with a common sliding window processing framework that efficiently manages GPU resources.",
+          "dependencies": [
+            1,
+            2,
+            3
+          ],
+          "details": "Design a consistent interface for all metrics. Implement efficient sliding window management that minimizes redundant computations and memory transfers. Create a resource management system that optimizes GPU memory usage across metrics. Implement batch processing capabilities to maximize GPU utilization. Add configuration options for window size, overlap, and other parameters.",
+          "status": "pending",
+          "testStrategy": "Test API usability with different parameter combinations. Benchmark memory usage during extended processing. Verify correct window handling with edge cases."
+        },
+        {
+          "id": 5,
+          "title": "Optimize Performance and Validate Against Targets",
+          "description": "Optimize the GPU implementations to meet performance targets on an 8vCPU VPS and validate the accuracy of all metrics against reference implementations.",
+          "dependencies": [
+            4
+          ],
+          "details": "Profile the implementations to identify bottlenecks. Optimize kernel configurations (block/grid sizes) for the target hardware. Implement memory access pattern optimizations. Reduce host-device transfers by keeping intermediate results on GPU. Implement mixed precision where appropriate to improve performance. Create comprehensive validation suite comparing results against reference implementations.",
+          "status": "pending",
+          "testStrategy": "Conduct end-to-end performance testing on target 8vCPU VPS. Compare processing times against performance targets. Validate accuracy across a diverse set of real-world signals. Test stability during extended processing sessions."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Event Correlation Service",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Develop a service that correlates entropy spikes with geo-located news/sports/events",
+      "details": "Create a service that detects significant spikes (Z>3) in coherence metrics and correlates them with real-world events using NewsAPI, API-Sports, PredictHQ, and local Llama-3 for enrichment. The service should return relevant headlines or events with geo-match confidence.",
+      "testStrategy": "Verify that the service returns at least one headline or sports event with geo-match confidence ≥0.7 within 30 seconds after a spike is detected.",
+      "dependencies": [
+        4
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Coherence Spike Detection Module",
+          "description": "Create a module that analyzes coherence metrics data streams and identifies significant spikes where Z-score exceeds 3.",
+          "dependencies": [],
+          "details": "Develop a statistical analysis component that processes incoming coherence metrics, calculates rolling Z-scores, and flags significant anomalies. Include configurable thresholds, time window parameters, and spike classification logic. The module should output spike events with timestamp, location, intensity, and confidence metrics.",
+          "status": "pending",
+          "testStrategy": "Unit test with synthetic data streams containing known anomalies. Validate detection accuracy against pre-calculated Z-scores."
+        },
+        {
+          "id": 2,
+          "title": "Integrate External Event APIs",
+          "description": "Develop adapters for NewsAPI, API-Sports, and PredictHQ to fetch geo-located events and news articles.",
+          "dependencies": [],
+          "details": "Create a unified API client interface with specific implementations for each provider. Each adapter should handle authentication, rate limiting, error handling, and data normalization. Implement geo-radius search capabilities and temporal filtering to match the timeframe of detected spikes. Store API responses in a standardized event format with source attribution.",
+          "status": "pending",
+          "testStrategy": "Mock API responses for testing. Verify correct handling of API limits, errors, and response parsing. Test geo-filtering accuracy with known coordinates."
+        },
+        {
+          "id": 3,
+          "title": "Develop Llama-3 Event Enrichment Pipeline",
+          "description": "Create a local Llama-3 based enrichment service that enhances event data with additional context and relevance scoring.",
+          "dependencies": [
+            2
+          ],
+          "details": "Set up a local Llama-3 inference endpoint optimized for low latency. Develop prompts that extract key information from raw event data, generate relevance scores, and provide additional context. Implement a caching mechanism to avoid redundant LLM calls. The pipeline should handle batched processing of events and maintain provenance of AI-generated content.",
+          "status": "pending",
+          "testStrategy": "Evaluate enrichment quality with a test set of diverse events. Measure inference latency and optimize for production performance. Verify consistency of relevance scoring."
+        },
+        {
+          "id": 4,
+          "title": "Build Event-Spike Correlation Engine",
+          "description": "Develop the core correlation logic that matches detected coherence spikes with potential causal events based on spatiotemporal proximity and relevance.",
+          "dependencies": [
+            1,
+            3
+          ],
+          "details": "Implement a correlation algorithm that considers geographic distance, temporal alignment, event magnitude, and semantic relevance. Use configurable weighting factors for each dimension. The engine should calculate a composite correlation score for each spike-event pair and rank potential matches. Include confidence intervals and uncertainty quantification in the output.",
+          "status": "pending",
+          "testStrategy": "Test with historical spike data and known events. Evaluate correlation accuracy using precision/recall metrics. Perform sensitivity analysis on correlation parameters."
+        },
+        {
+          "id": 5,
+          "title": "Create API and Reporting Interface",
+          "description": "Develop a REST API and reporting interface for the correlation service that allows querying of spike-event correlations and generates detailed reports.",
+          "dependencies": [
+            4
+          ],
+          "details": "Implement a RESTful API with endpoints for querying recent correlations, searching historical data, and triggering on-demand analysis. Create structured response formats with correlation details, confidence metrics, and supporting evidence. Develop a reporting module that generates human-readable summaries and visualizations of correlations. Include authentication, rate limiting, and comprehensive logging.",
+          "status": "pending",
+          "testStrategy": "Perform integration testing of the complete service pipeline. Test API endpoints with various query parameters. Validate report generation with different correlation scenarios."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Experiment Manager",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Develop an Experiment Manager for scheduling and tracking Wald SPRT experiments",
+      "details": "Implement a service that allows researchers to define, schedule, and monitor experiments using the Sequential Probability Ratio Test (SPRT) methodology. Implement auto-stop functionality based on p-value thresholds or timeout conditions. Include export capabilities for research publication.",
+      "testStrategy": "Verify one-click experiment functionality with rolling p-value calculation and auto-stop when p<0.01 or timeout. Test experiment results export to CSV format.",
+      "dependencies": [
+        3,
+        4
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create Experiment Configuration Model",
+          "description": "Design and implement the data model for SPRT experiment configuration, including parameters for hypothesis testing, stopping criteria, and scheduling options.",
+          "dependencies": [],
+          "details": "Create a robust data model that captures all necessary parameters for SPRT experiments: null/alternative hypotheses, alpha/beta error rates, p-value thresholds for early stopping, maximum duration/sample size, and scheduling parameters (start time, frequency). Include validation logic to ensure parameter combinations are valid for SPRT methodology.",
+          "status": "pending",
+          "testStrategy": "Unit tests for model validation logic, ensuring invalid configurations are rejected and valid ones are accepted. Test edge cases for parameter combinations."
+        },
+        {
+          "id": 2,
+          "title": "Implement Experiment Scheduler Service",
+          "description": "Develop a service to handle the scheduling and execution of experiments based on researcher-defined parameters.",
+          "dependencies": [
+            1
+          ],
+          "details": "Create a scheduler service that manages experiment execution according to configured schedules. Implement functionality to queue experiments, trigger them at specified times, and manage their lifecycle. Use a job scheduling library (like Quartz or a cloud-based scheduler) to handle timing. Include retry logic for failed experiment runs and proper error handling.",
+          "status": "pending",
+          "testStrategy": "Integration tests with mocked time to verify scheduling behavior. Test scenarios including immediate execution, delayed execution, and recurring experiments."
+        },
+        {
+          "id": 3,
+          "title": "Develop SPRT Monitoring and Auto-Stop Logic",
+          "description": "Implement the core SPRT algorithm monitoring with auto-stopping functionality based on statistical thresholds or timeout conditions.",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Create the logic to continuously evaluate experiment results using the SPRT methodology. Implement auto-stopping based on: 1) p-value crossing predefined thresholds, 2) maximum sample size reached, or 3) timeout duration elapsed. Include intermediate calculations of likelihood ratios and sequential probability ratios. Ensure thread-safety for concurrent experiment monitoring.",
+          "status": "pending",
+          "testStrategy": "Unit tests with simulated data streams to verify correct SPRT calculations and stopping decisions. Test boundary conditions and edge cases for stopping criteria."
+        },
+        {
+          "id": 4,
+          "title": "Create Experiment Results Dashboard",
+          "description": "Build a user interface for researchers to monitor ongoing experiments and view completed experiment results with visualizations.",
+          "dependencies": [
+            3
+          ],
+          "details": "Develop a dashboard that displays: 1) Active experiments with real-time progress indicators and interim results, 2) Completed experiments with full statistical analysis, 3) Visualizations of SPRT decision boundaries and sample paths, and 4) Experiment status history. Include filtering and sorting capabilities for managing multiple experiments. Implement real-time updates using WebSockets or polling.",
+          "status": "pending",
+          "testStrategy": "UI component tests for dashboard elements. Integration tests for data flow from backend to frontend. User acceptance testing for dashboard usability."
+        },
+        {
+          "id": 5,
+          "title": "Implement Export and Reporting Functionality",
+          "description": "Create capabilities to export experiment results in formats suitable for research publication and further analysis.",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Implement export functionality supporting multiple formats: 1) CSV/Excel for raw data, 2) JSON for programmatic consumption, 3) PDF reports with statistical summaries and visualizations for publication. Include metadata about experiment configuration, execution timeline, and statistical significance. Add batch export capabilities for multiple experiments and scheduled report generation.",
+          "status": "pending",
+          "testStrategy": "Unit tests for each export format to verify correct data inclusion and formatting. Integration tests to verify end-to-end export workflow from experiment completion to file generation."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "FastAPI/GraphQL Gateway",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Develop an API gateway with FastAPI and GraphQL integration",
+      "details": "Implement a gateway service using FastAPI with Ariadne GraphQL integration and JWT authentication. The gateway should provide access to all system functionality, including camera management, metrics, experiments, and events.",
+      "testStrategy": "Verify that the API provides access to all system functionality with proper authentication. Test query performance and WebSocket message delivery.",
+      "dependencies": [
+        1,
+        3,
+        4,
+        5,
+        6
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up FastAPI project structure with Ariadne GraphQL",
+          "description": "Initialize the FastAPI project with proper directory structure and integrate Ariadne for GraphQL support",
+          "dependencies": [],
+          "details": "Create a new FastAPI project with appropriate directory structure (routes, schemas, resolvers, middleware). Set up Ariadne GraphQL integration with FastAPI. Configure CORS, logging, and basic error handling. Create a health check endpoint. Set up dependency injection system for services.",
+          "status": "pending",
+          "testStrategy": "Write unit tests for the basic setup, including health check endpoint and GraphQL endpoint availability."
+        },
+        {
+          "id": 2,
+          "title": "Implement JWT authentication middleware",
+          "description": "Create JWT authentication and authorization middleware for securing API endpoints",
+          "dependencies": [
+            1
+          ],
+          "details": "Implement JWT token generation, validation, and refresh mechanisms. Create middleware for authenticating requests. Set up role-based access control for different API operations. Implement user context extraction from JWT tokens. Create authentication-related GraphQL mutations (login, refresh token).",
+          "status": "pending",
+          "testStrategy": "Test JWT token generation, validation, and middleware functionality with mock requests. Verify proper error handling for invalid or expired tokens."
+        },
+        {
+          "id": 3,
+          "title": "Develop GraphQL schema and resolvers for camera management",
+          "description": "Create GraphQL types, queries, mutations, and resolvers for camera management functionality",
+          "dependencies": [
+            2
+          ],
+          "details": "Define GraphQL types for cameras and related entities. Implement queries for retrieving camera information, status, and configuration. Create mutations for camera operations (add, update, delete, configure). Implement resolvers that connect to the appropriate microservices. Handle error cases and proper response formatting.",
+          "status": "pending",
+          "testStrategy": "Create unit tests for resolvers with mocked service responses. Test query and mutation functionality with various input scenarios."
+        },
+        {
+          "id": 4,
+          "title": "Implement GraphQL schema and resolvers for metrics and experiments",
+          "description": "Create GraphQL types, queries, mutations, and resolvers for metrics collection and experiment management",
+          "dependencies": [
+            2
+          ],
+          "details": "Define GraphQL types for metrics, experiments, and related entities. Implement queries for retrieving metrics data with filtering and pagination. Create mutations for experiment management (create, update, delete, start, stop). Implement resolvers that connect to the appropriate microservices. Add support for metrics aggregation and time-series data retrieval.",
+          "status": "pending",
+          "testStrategy": "Test metrics queries with mock time-series data. Verify experiment mutations with various input parameters and edge cases."
+        },
+        {
+          "id": 5,
+          "title": "Develop event system integration and API documentation",
+          "description": "Integrate the event system with GraphQL subscriptions and create comprehensive API documentation",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Implement GraphQL subscriptions for real-time event notifications. Create resolvers for event queries and subscriptions. Set up WebSocket support for subscription handling. Generate comprehensive API documentation using tools like GraphQL Playground or GraphiQL. Create usage examples and authentication guides. Implement rate limiting and request validation.",
+          "status": "pending",
+          "testStrategy": "Test subscription functionality with mock events. Verify documentation accuracy and completeness. Test rate limiting with high-volume request simulation."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Next.js + Three.js/WebGPU Dashboard",
+      "status": "pending",
+      "priority": "high",
+      "description": "Develop a real-time 3D globe dashboard for visualizing entropy network and metrics",
+      "details": "Create a modern web dashboard using Next.js, React, Three.js/WebGPU that renders a real-time 3D globe visualization of the entropy network. Node spheres should have size proportional to quality and color representing coherence metrics. Implement drill-down capabilities for city-level metrics.",
+      "testStrategy": "Verify that the globe refreshes within 5s of updates and maintains FPS ≥55 on M1/M3 laptops at 1080p resolution. Test drill-down functionality and data visualization accuracy.",
+      "dependencies": [
+        7
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up Next.js project with Three.js/WebGPU integration",
+          "description": "Initialize a Next.js project with TypeScript and integrate Three.js with WebGPU renderer support. Configure the project structure and essential dependencies.",
+          "dependencies": [],
+          "details": "Create a new Next.js project using `create-next-app` with TypeScript support. Install Three.js and necessary WebGPU extensions. Set up project folders for components, hooks, and utilities. Configure environment variables for API endpoints. Create a basic layout component with a canvas element for the 3D rendering.",
+          "status": "pending",
+          "testStrategy": "Verify WebGPU compatibility with browser checks. Create a simple test scene to confirm Three.js is rendering correctly in the Next.js environment."
+        },
+        {
+          "id": 2,
+          "title": "Implement 3D globe model with shader materials",
+          "description": "Create a high-performance 3D globe model using Three.js with custom shader materials for Earth representation, including texture mapping and atmosphere effects.",
+          "dependencies": [
+            1
+          ],
+          "details": "Develop a Globe class that extends Three.js Object3D. Implement Earth texture mapping with high-resolution textures. Create custom GLSL shaders for realistic atmosphere glow and cloud layers. Optimize the globe rendering for WebGPU performance. Add rotation controls and smooth animation for globe interaction.",
+          "status": "pending",
+          "testStrategy": "Test globe rendering performance across different devices. Verify texture loading and shader compilation. Ensure smooth rotation and interaction with the globe model."
+        },
+        {
+          "id": 3,
+          "title": "Develop data visualization layer for network nodes",
+          "description": "Create a visualization layer that renders network nodes as spheres on the globe with dynamic sizing and coloring based on quality and coherence metrics.",
+          "dependencies": [
+            2
+          ],
+          "details": "Implement a NodeVisualizer class that converts geographic coordinates to 3D positions on the globe. Create instanced mesh rendering for efficient node visualization. Develop a color mapping system for coherence metrics using a custom color scale. Implement dynamic sizing of node spheres based on quality metrics. Add hover effects and selection highlighting for nodes.",
+          "status": "pending",
+          "testStrategy": "Test with sample data sets of varying sizes to ensure performance. Verify correct positioning of nodes on the globe surface. Test color and size mapping accuracy against input metrics."
+        },
+        {
+          "id": 4,
+          "title": "Build real-time data fetching and update system",
+          "description": "Implement a real-time data fetching system using React hooks and context to update the globe visualization with live network metrics.",
+          "dependencies": [
+            3
+          ],
+          "details": "Create a custom React hook for fetching network data from the API. Implement WebSocket connection for real-time updates. Develop a data transformation layer to convert API responses to visualization-ready formats. Create a React context provider for sharing network state across components. Implement efficient update mechanisms to minimize re-renders while maintaining real-time visualization.",
+          "status": "pending",
+          "testStrategy": "Test data fetching with mock API responses. Verify WebSocket reconnection logic. Measure update performance and optimize for minimal latency. Test error handling and recovery scenarios."
+        },
+        {
+          "id": 5,
+          "title": "Implement drill-down UI for city-level metrics",
+          "description": "Create an interactive UI system that allows users to drill down into city-level metrics when selecting nodes on the globe.",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Develop a ray-casting system for accurate node selection on the globe. Create animated camera transitions to zoom into selected regions. Implement a metrics panel component that displays detailed city-level data. Design and implement filtering controls for exploring different metrics. Add breadcrumb navigation for drill-down history. Ensure responsive layout that works well with the 3D visualization.",
+          "status": "pending",
+          "testStrategy": "Test selection accuracy across different globe positions. Verify metrics panel displays correct data for selected nodes. Test responsive behavior across device sizes. Conduct usability testing for the drill-down interaction flow."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Database and Messaging Infrastructure",
+      "status": "pending",
+      "priority": "high",
+      "description": "Set up TimescaleDB, PostgreSQL, Redis, and NATS infrastructure",
+      "details": "Configure and deploy the necessary data infrastructure: TimescaleDB 2.15 (PostgreSQL 16 extension) for time-series data, PostgreSQL 16 for relational data, Redis 7 for caching, and NATS JetStream 3.x for messaging. Set up appropriate schemas, tables, and indexes.",
+      "testStrategy": "Verify database performance metrics, message throughput, and system stability under load.",
+      "dependencies": [],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Deploy PostgreSQL 16 with TimescaleDB 2.15 Extension",
+          "description": "Set up and configure PostgreSQL 16 database server with TimescaleDB 2.15 extension for time-series data storage",
+          "dependencies": [],
+          "details": "Install PostgreSQL 16 on the target environment. Configure memory, connections, and performance parameters based on system resources. Install TimescaleDB 2.15 extension. Set up appropriate backup and recovery mechanisms. Configure network access and security settings including firewall rules and SSL certificates. Document connection strings and access credentials in the secure team repository.",
+          "status": "pending",
+          "testStrategy": "Verify successful installation by connecting to the database. Run benchmark tests to ensure performance meets requirements. Validate TimescaleDB extension functionality by creating a test hypertable and inserting/querying time-series data."
+        },
+        {
+          "id": 2,
+          "title": "Configure PostgreSQL Database Schemas and Tables",
+          "description": "Design and implement the relational database schemas, tables, and indexes for the application data model",
+          "dependencies": [],
+          "details": "Create database schemas according to the application domain boundaries. Implement tables with appropriate columns, data types, and constraints. Set up foreign key relationships between tables. Create indexes for frequently queried columns. Implement partitioning strategies for large tables if needed. Configure user roles and permissions with principle of least privilege. Document the schema design with entity-relationship diagrams.",
+          "status": "pending",
+          "testStrategy": "Validate schema design against application requirements. Test data insertion, retrieval, and relationship integrity. Verify index effectiveness with EXPLAIN ANALYZE queries. Ensure permissions work correctly for different user roles."
+        },
+        {
+          "id": 3,
+          "title": "Set up Redis 7 Caching Infrastructure",
+          "description": "Deploy and configure Redis 7 for application caching needs",
+          "dependencies": [],
+          "details": "Install Redis 7 on the target environment. Configure memory limits, eviction policies, and persistence options. Set up Redis Sentinel or Redis Cluster for high availability if required. Implement security measures including authentication and network restrictions. Define key naming conventions and TTL (Time-To-Live) policies for different types of cached data. Document Redis configuration and access methods for the development team.",
+          "status": "pending",
+          "testStrategy": "Verify Redis connectivity and basic operations. Test cache hit/miss scenarios. Benchmark read/write performance under load. Validate persistence configuration by simulating restarts."
+        },
+        {
+          "id": 4,
+          "title": "Deploy NATS JetStream 3.x Messaging System",
+          "description": "Set up NATS JetStream 3.x for reliable messaging and event streaming",
+          "dependencies": [],
+          "details": "Install NATS Server with JetStream 3.x enabled. Configure server resources, limits, and storage options. Set up clustering for high availability if required. Define security policies including authentication and authorization. Configure network settings and TLS for secure communication. Document connection details, authentication methods, and basic usage patterns for the development team.",
+          "status": "pending",
+          "testStrategy": "Verify NATS server health and JetStream availability. Test publish/subscribe patterns with various message sizes. Validate persistence by ensuring messages survive server restarts. Test throughput and latency under expected load conditions."
+        },
+        {
+          "id": 5,
+          "title": "Implement Data Infrastructure Integration and Monitoring",
+          "description": "Integrate all data infrastructure components and set up comprehensive monitoring",
+          "dependencies": [],
+          "details": "Create connection libraries and configuration files for application services to access all data infrastructure components. Implement health check endpoints for each component. Set up monitoring using Prometheus and Grafana dashboards. Configure alerts for critical metrics like disk usage, memory consumption, connection counts, and error rates. Document operational procedures for maintenance, backup/restore, and troubleshooting. Create runbooks for common failure scenarios.",
+          "status": "pending",
+          "testStrategy": "Validate end-to-end connectivity from application services to all data components. Test failover scenarios for each component. Verify monitoring dashboards show accurate metrics. Simulate alert conditions to ensure proper notification. Conduct a recovery drill using documented procedures."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "CI/CD, Monitoring, and Infrastructure as Code",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Implement CI/CD pipeline, monitoring, and IaC for VPS deployment",
+      "details": "Set up Docker, Helm, k3s, GitHub Actions for CI/CD. Implement Prometheus + Grafana for monitoring. Create infrastructure as code (IaC) scripts for deploying the entire system on a single VPS with a clear path to horizontal scaling.",
+      "testStrategy": "Verify that the entire system can be deployed on a single VPS with OPEX ≤€120/month. Test system monitoring and alerting functionality.",
+      "dependencies": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up Docker and k3s on VPS",
+          "description": "Install and configure Docker and k3s on the VPS to create a lightweight Kubernetes environment for container orchestration.",
+          "dependencies": [],
+          "details": "Install Docker on the VPS. Install k3s as a lightweight Kubernetes distribution. Configure k3s for single-node deployment with appropriate resource limits. Set up kubectl for remote management. Document the installation process and configuration settings for future reference.",
+          "status": "pending",
+          "testStrategy": "Verify Docker and k3s installation by running basic containers. Confirm kubectl connectivity and ability to deploy test pods. Check system resource usage to ensure proper configuration."
+        },
+        {
+          "id": 2,
+          "title": "Create Infrastructure as Code (IaC) scripts",
+          "description": "Develop IaC scripts using Terraform or similar tools to automate the provisioning and configuration of the VPS infrastructure.",
+          "dependencies": [
+            1
+          ],
+          "details": "Choose appropriate IaC tool (Terraform recommended). Create scripts to provision VPS resources including networking, storage, and security configurations. Implement modular design to support future horizontal scaling. Include configuration for DNS, SSL certificates, and load balancing. Document the IaC architecture and usage instructions.",
+          "status": "pending",
+          "testStrategy": "Test IaC scripts in a staging environment. Verify idempotency by running scripts multiple times. Validate that all required resources are correctly provisioned and configured."
+        },
+        {
+          "id": 3,
+          "title": "Implement Helm charts for application deployment",
+          "description": "Create Helm charts to package and deploy the application components to the k3s cluster with consistent configuration.",
+          "dependencies": [
+            1
+          ],
+          "details": "Design Helm chart structure for all application components. Create templates for deployments, services, ingress, and other Kubernetes resources. Implement configurable values for different environments. Set up appropriate resource requests and limits. Include health checks and readiness probes. Document chart usage and customization options.",
+          "status": "pending",
+          "testStrategy": "Test Helm chart installation and upgrades in development environment. Verify that all application components deploy correctly and can communicate with each other. Validate configuration options work as expected."
+        },
+        {
+          "id": 4,
+          "title": "Set up GitHub Actions CI/CD pipeline",
+          "description": "Create GitHub Actions workflows to automate building, testing, and deploying the application to the k3s cluster.",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "Create workflow files for CI/CD pipeline. Implement stages for code linting, testing, building Docker images, and deploying to k3s. Set up environment-specific configurations and secrets management. Configure automated versioning and tagging. Implement rollback mechanisms for failed deployments. Document the CI/CD process and troubleshooting steps.",
+          "status": "pending",
+          "testStrategy": "Test the CI/CD pipeline with sample code changes. Verify that all stages execute correctly. Confirm successful deployment to the VPS. Test rollback functionality by intentionally introducing failures."
+        },
+        {
+          "id": 5,
+          "title": "Implement Prometheus and Grafana for monitoring",
+          "description": "Set up Prometheus for metrics collection and Grafana for visualization to monitor the health and performance of the application and infrastructure.",
+          "dependencies": [
+            3
+          ],
+          "details": "Deploy Prometheus and Grafana using Helm charts. Configure Prometheus to scrape metrics from application components and infrastructure. Set up alerting rules for critical conditions. Create Grafana dashboards for system metrics, application performance, and business KPIs. Implement log aggregation and correlation with metrics. Document monitoring setup and alert response procedures.",
+          "status": "pending",
+          "testStrategy": "Verify metrics collection from all components. Test alerting by simulating failure conditions. Validate dashboard visualizations provide meaningful insights. Ensure monitoring system has minimal performance impact on the application."
+        }
+      ]
+    }
+  ]
+}

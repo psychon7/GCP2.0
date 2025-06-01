@@ -1,0 +1,43 @@
+# Task ID: 6
+# Title: Experiment Manager
+# Status: pending
+# Dependencies: 3, 4
+# Priority: medium
+# Description: Develop an Experiment Manager for scheduling and tracking Wald SPRT experiments
+# Details:
+Implement a service that allows researchers to define, schedule, and monitor experiments using the Sequential Probability Ratio Test (SPRT) methodology. Implement auto-stop functionality based on p-value thresholds or timeout conditions. Include export capabilities for research publication.
+
+# Test Strategy:
+Verify one-click experiment functionality with rolling p-value calculation and auto-stop when p<0.01 or timeout. Test experiment results export to CSV format.
+
+# Subtasks:
+## 1. Create Experiment Configuration Model [pending]
+### Dependencies: None
+### Description: Design and implement the data model for SPRT experiment configuration, including parameters for hypothesis testing, stopping criteria, and scheduling options.
+### Details:
+Create a robust data model that captures all necessary parameters for SPRT experiments: null/alternative hypotheses, alpha/beta error rates, p-value thresholds for early stopping, maximum duration/sample size, and scheduling parameters (start time, frequency). Include validation logic to ensure parameter combinations are valid for SPRT methodology.
+
+## 2. Implement Experiment Scheduler Service [pending]
+### Dependencies: 6.1
+### Description: Develop a service to handle the scheduling and execution of experiments based on researcher-defined parameters.
+### Details:
+Create a scheduler service that manages experiment execution according to configured schedules. Implement functionality to queue experiments, trigger them at specified times, and manage their lifecycle. Use a job scheduling library (like Quartz or a cloud-based scheduler) to handle timing. Include retry logic for failed experiment runs and proper error handling.
+
+## 3. Develop SPRT Monitoring and Auto-Stop Logic [pending]
+### Dependencies: 6.1, 6.2
+### Description: Implement the core SPRT algorithm monitoring with auto-stopping functionality based on statistical thresholds or timeout conditions.
+### Details:
+Create the logic to continuously evaluate experiment results using the SPRT methodology. Implement auto-stopping based on: 1) p-value crossing predefined thresholds, 2) maximum sample size reached, or 3) timeout duration elapsed. Include intermediate calculations of likelihood ratios and sequential probability ratios. Ensure thread-safety for concurrent experiment monitoring.
+
+## 4. Create Experiment Results Dashboard [pending]
+### Dependencies: 6.3
+### Description: Build a user interface for researchers to monitor ongoing experiments and view completed experiment results with visualizations.
+### Details:
+Develop a dashboard that displays: 1) Active experiments with real-time progress indicators and interim results, 2) Completed experiments with full statistical analysis, 3) Visualizations of SPRT decision boundaries and sample paths, and 4) Experiment status history. Include filtering and sorting capabilities for managing multiple experiments. Implement real-time updates using WebSockets or polling.
+
+## 5. Implement Export and Reporting Functionality [pending]
+### Dependencies: 6.3, 6.4
+### Description: Create capabilities to export experiment results in formats suitable for research publication and further analysis.
+### Details:
+Implement export functionality supporting multiple formats: 1) CSV/Excel for raw data, 2) JSON for programmatic consumption, 3) PDF reports with statistical summaries and visualizations for publication. Include metadata about experiment configuration, execution timeline, and statistical significance. Add batch export capabilities for multiple experiments and scheduled report generation.
+

@@ -682,6 +682,113 @@
           "testStrategy": "Verify metrics collection from all components. Test alerting by simulating failure conditions. Validate dashboard visualizations provide meaningful insights. Ensure monitoring system has minimal performance impact on the application."
         }
       ]
+    },
+    {
+      "id": 11,
+      "title": "Setup Terraform for AWS Infrastructure Provisioning",
+      "description": "Create Terraform configuration files to define and provision all necessary AWS resources (VPC, EC2, EBS, S3, IAM, Security Groups, EIP) for the GCP data infrastructure.",
+      "details": "",
+      "testStrategy": "",
+      "status": "done",
+      "dependencies": [],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create Terraform variables.tf file",
+          "description": "Define input variables for the Terraform configuration, such as AWS region, instance type, AMI ID, EBS volume size, SSH key name, and user's IP for SSH access. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "The file will contain variable blocks for aws_region, project_name, instance_type, ami_id, ebs_data_volume_size_gb, ssh_key_name, and your_ip_for_ssh.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 2,
+          "title": "Create user_data.sh script for EC2 setup",
+          "description": "This script will be executed by the EC2 instance on its first boot. It will install Docker, Docker Compose, AWS CLI, format and mount the EBS data volume, and perform other initial setup tasks. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "The script includes commands for package updates, Docker/Docker Compose installation, robust EBS volume detection, formatting, mounting, and fstab entry creation. It also includes logging for troubleshooting.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 3,
+          "title": "Create Terraform vpc.tf file",
+          "description": "Define the Virtual Private Cloud (VPC), public subnet, internet gateway, route table, and route table association. This sets up the basic network infrastructure for the EC2 instance. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "Includes resources for aws_vpc, aws_internet_gateway, aws_subnet, data.aws_availability_zones, aws_route_table, and aws_route_table_association.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 4,
+          "title": "Create Terraform securitygroup.tf file",
+          "description": "Define the AWS Security Group for the EC2 instance. This will allow SSH access from a specified IP address and all outbound traffic. Other service ports will be handled by Docker port mapping to localhost. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "Includes an aws_security_group resource with an ingress rule for SSH (port 22) from the user's IP and a default egress rule allowing all outbound traffic.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 5,
+          "title": "Create Terraform iam.tf file",
+          "description": "Define the IAM role and policy for the EC2 instance to allow it to write backups to an S3 bucket. Also creates an IAM instance profile. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "Includes resources for aws_iam_role, aws_iam_policy, aws_iam_role_policy_attachment, and aws_iam_instance_profile.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 6,
+          "title": "Create Terraform s3.tf file",
+          "description": "Define the S3 bucket that will be used for storing backups. It will have versioning and server-side encryption enabled. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "Includes an aws_s3_bucket resource with versioning and server_side_encryption_configuration. A random_id resource is used to ensure bucket name uniqueness.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 7,
+          "title": "Create Terraform main.tf file",
+          "description": "This is the main Terraform configuration file. It defines providers (AWS, random), the EC2 instance itself (including root and EBS data volumes, user data script association, IAM profile), and the Elastic IP. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "Includes terraform block for provider configuration, aws provider block, aws_eip resource, and aws_instance resource with detailed block device mappings and user_data.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        },
+        {
+          "id": 8,
+          "title": "Create Terraform outputs.tf file",
+          "description": "Define outputs for the Terraform configuration, such as the public IP address of the EC2 instance and the S3 bucket name. This file will be placed in the gcp-infra-terraform directory.",
+          "details": "Includes output blocks for ec2_public_ip and backup_s3_bucket_name.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 11
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Setup CI/CD Pipeline with GitHub Actions for EC2 Deployment",
+      "description": "Create a GitHub Actions workflow to automate the deployment of the application to the provisioned EC2 instance whenever code is pushed to the repository.",
+      "details": "",
+      "testStrategy": "",
+      "status": "done",
+      "dependencies": [
+        11
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create GitHub Actions workflow file (deploy.yml)",
+          "description": "Create the main GitHub Actions workflow YAML file (e.g., .github/workflows/deploy.yml). This file will define the triggers (e.g., push to main branch) and the jobs/steps for deployment.",
+          "details": "The workflow will include steps to: checkout code, configure SSH access to the EC2 instance, securely write the .env file from GitHub Secrets, navigate to the project directory on EC2, pull the latest application code (if not already part of the Docker image build process), pull latest Docker images, and then stop and restart the Docker Compose services.",
+          "status": "done",
+          "dependencies": [],
+          "parentTaskId": 12
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,68 @@
+# Camera Management Service Configuration
+
+# Database configuration
+[database]
+connection_string = "postgresql://user:pass@localhost:5432/cameras"
+pool_size = 5
+max_overflow = 10
+pool_timeout = 30
+pool_recycle = 1800
+
+# Discovery configuration
+[discovery]
+max_workers = 10
+request_timeout = 30
+max_retries = 3
+retry_delay = 5
+
+# Source-specific settings
+dot_enabled = true
+earthcam_enabled = true
+insecam_enabled = true
+shodan_enabled = true
+
+# Rate limiting
+rate_limit_requests = 10
+rate_limit_window = 60
+
+# Validation configuration
+[validation]
+max_workers = 5
+connection_timeout = 10
+fps_threshold = 1.0
+max_latency_ms = 2000
+entropy_quality_threshold = 0.7
+validation_duration = 10
+frame_sample_count = 30
+
+# Health monitoring configuration
+[health]
+check_interval = 30
+min_pool_size = 100
+availability_threshold = 0.8
+max_consecutive_failures = 5
+backoff_base = 2.0
+backoff_max = 3600
+max_workers = 10
+
+# API configuration
+[api]
+host = "0.0.0.0"
+port = 8000
+debug = false
+workers = 4
+cors_origins = ["*"]
+api_prefix = "/api/v1"
+
+# Geographic distribution configuration
+[geographic]
+max_continent_percentage = 0.3
+max_country_percentage = 0.2
+min_continents = 3
+min_countries = 10
+
+# Logging configuration
+[logging]
+level = "INFO"
+format = "json"
+output = "stdout"

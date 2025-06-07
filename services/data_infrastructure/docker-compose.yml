@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for relational data
+  postgres:
+    image: postgres:16
+    container_name: gcp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gcp_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gcp_password}
+      POSTGRES_DB: gcp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./init/postgres:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gcp_user -d gcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gcp_network
+
+  # TimescaleDB for time-series data
+  timescaledb:
+    image: timescale/timescaledb:2.15.0-pg16
+    container_name: gcp_timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gcp_user
+      POSTGRES_PASSWORD: ${TIMESCALEDB_PASSWORD:-gcp_password}
+      POSTGRES_DB: gcp_timeseries
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./config/timescaledb/timescaledb.conf:/etc/postgresql/timescaledb.conf
+      - ./init/timescaledb:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    command: postgres -c config_file=/etc/postgresql/timescaledb.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gcp_user -d gcp_timeseries"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gcp_network
+
+  # Redis for caching
+  redis:
+    image: redis:7
+    container_name: gcp_redis
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - redis_data:/data
+      - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gcp_network
+
+  # NATS JetStream for messaging
+  nats:
+    image: nats:2.10-alpine
+    container_name: gcp_nats
+    restart: unless-stopped
+    command: -js -c /etc/nats/nats-server.conf
+    volumes:
+      - nats_data:/data
+      - ./config/nats/nats-server.conf:/etc/nats/nats-server.conf
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gcp_network
+
+  # Prometheus exporters for monitoring
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: gcp_postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://gcp_user:${POSTGRES_PASSWORD:-gcp_password}@postgres:5432/gcp?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    networks:
+      - gcp_network
+
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: gcp_redis_exporter
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - gcp_network
+
+volumes:
+  postgres_data:
+  timescaledb_data:
+  redis_data:
+  nats_data:
+
+networks:
+  gcp_network:
+    driver: bridge

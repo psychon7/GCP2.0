@@ -1,0 +1,38 @@
+# Core dependencies
+fastapi==0.111.0
+uvicorn==0.27.1
+sqlalchemy==2.0.27
+alembic==1.13.1
+pydantic==2.6.1
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+tomli==2.0.1
+
+# Database
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# HTTP and networking
+aiohttp==3.9.3
+httpx==0.26.0
+requests==2.31.0
+
+# Computer vision
+opencv-python==4.9.0.80
+numpy==1.26.3
+
+# Geolocation
+geoip2==4.7.0
+geopy==2.4.1
+
+# Monitoring and metrics
+prometheus-client==0.19.0
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+opentelemetry-exporter-prometheus==1.22.0
+structlog==24.1.0
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.5
+pytest-cov==4.1.0

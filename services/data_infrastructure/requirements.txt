@@ -1,0 +1,13 @@
+# Data Infrastructure Python Dependencies
+
+# Database
+psycopg2-binary==2.9.9  # PostgreSQL and TimescaleDB client
+
+# Redis
+redis==5.0.1  # Redis client
+
+# NATS
+nats-py==2.6.0  # NATS client
+
+# Utilities
+python-dotenv==1.0.0  # Environment variable management

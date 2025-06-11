@@ -56,3 +56,6 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# PEM key files
+gcp-ec2-key-us-east-1.pem

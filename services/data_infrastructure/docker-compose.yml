@@ -74,7 +74,7 @@ services:
     image: nats:2.10-alpine
     container_name: gcp_nats
     restart: unless-stopped
-    command: -js -c /etc/nats/nats-server.conf
+    command: ["-js", "-c", "/etc/nats/nats-server.conf"]
     volumes:
       - nats_data:/data
       - ./config/nats/nats-server.conf:/etc/nats/nats-server.conf

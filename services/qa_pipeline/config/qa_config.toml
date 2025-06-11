@@ -1,0 +1,45 @@
+# QA Pipeline Configuration
+
+[service]
+# Service settings
+name = "qa_pipeline"
+log_level = "INFO"
+
+# NATS Connection settings
+[nats]
+enabled = true
+servers = ["nats://localhost:4222"]
+subject_input = "qa.input"
+subject_output = "qa.output"
+queue_group = "qa_workers"
+connect_timeout = 5.0
+reconnect_attempts = 5
+max_reconnect_attempts = -1  # -1 means unlimited
+
+# Test settings
+[tests]
+# Minimum number of bits required for tests
+min_sample_size = 100
+
+# Available tests
+[[tests.test_configs]]
+test_id = "nist_frequency.NistFrequencyTest"
+enabled = true
+parameters = { }
+threshold = 0.01  # p-value threshold
+weight = 1.0  # weight in the overall score
+
+# More statistical tests will be added here
+# [[tests.test_configs]]
+# test_id = "runs.NistRunsTest"
+# enabled = true
+# parameters = { }
+# threshold = 0.01
+# weight = 1.0
+
+# Node status monitoring
+[node_monitoring]
+enabled = true
+rolling_window_samples = 100  # Number of samples to keep for rolling average
+threshold_score = 70.0  # Minimum acceptable rolling score
+flagging_period = 10  # Number of consecutive below-threshold scores to flag a node

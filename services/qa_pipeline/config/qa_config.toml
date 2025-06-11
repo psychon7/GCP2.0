@@ -29,13 +29,33 @@ parameters = { }
 threshold = 0.01  # p-value threshold
 weight = 1.0  # weight in the overall score
 
-# More statistical tests will be added here
-# [[tests.test_configs]]
-# test_id = "runs.NistRunsTest"
-# enabled = true
-# parameters = { }
-# threshold = 0.01
-# weight = 1.0
+[[tests.test_configs]]
+test_id = "nist_runs.NistRunsTest"
+enabled = true
+parameters = { }
+threshold = 0.01  # p-value threshold
+weight = 1.0  # weight in the overall score
+
+[[tests.test_configs]]
+test_id = "chi_squared.ChiSquaredTest"
+enabled = true
+parameters = { block_size = 8 }  # Test 8-bit (byte) patterns
+threshold = 0.01  # p-value threshold
+weight = 1.0  # weight in the overall score
+
+[[tests.test_configs]]
+test_id = "approximate_entropy.ApproximateEntropyTest"
+enabled = true
+parameters = { block_size = 2 }  # Test with m=2 (comparing 2-bit vs 3-bit patterns)
+threshold = 0.01  # p-value threshold
+weight = 1.0  # weight in the overall score
+
+[[tests.test_configs]]
+test_id = "autocorrelation.AutocorrelationTest"
+enabled = true
+parameters = { max_lag = 50 }  # Test autocorrelation up to lag 50
+threshold = 0.01  # p-value threshold
+weight = 1.0  # weight in the overall score
 
 # Node status monitoring
 [node_monitoring]

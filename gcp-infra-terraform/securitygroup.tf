@@ -8,7 +8,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.your_ip_for_ssh]
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Allows SSH from anywhere. Required for GitHub Actions.
   }
 
   # Add other ingress rules if absolutely necessary (e.g., HTTP/S if serving web content)

@@ -70,7 +70,7 @@
     {
       "id": 2,
       "title": "Edge Entropy Extraction Agent",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "description": "Develop a Rust-based agent that pulls frames from camera feeds and extracts entropy via SHA-3 512-bit hash digests",
       "details": "Implement a high-performance Rust agent that pulls frames from cameras at 1-30 FPS, processes them for entropy, and outputs SHA-3 512-bit hash samples. The agent should achieve <100ms latency from frame capture to hash digest delivery via NATS.",
@@ -85,7 +85,7 @@
           "description": "Create a Rust module that can connect to and pull frames from camera feeds at configurable frame rates (1-30 FPS).",
           "dependencies": [],
           "details": "Use the `v4l` (Video4Linux) or similar crates for Linux camera access, or platform-specific alternatives. Implement a configurable frame rate limiter to control capture frequency. Design the module to handle multiple camera sources and expose a clean API that returns frame data as bytes. Include error handling for camera disconnections and permission issues.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test with mock camera devices and real hardware. Verify frame capture rates match configuration and measure timing consistency."
         },
         {
@@ -96,7 +96,7 @@
             1
           ],
           "details": "Implement frame preprocessing including optional resizing, grayscale conversion, and noise filtering to optimize for entropy extraction. Use Rust image processing libraries like `image` crate. Design the pipeline to be configurable and efficient, with minimal memory allocations. Consider using parallel processing for performance optimization.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Benchmark processing time with various frame sizes and transformations. Verify output consistency and quality."
         },
         {
@@ -107,7 +107,7 @@
             2
           ],
           "details": "Use the `sha3` crate or RustCrypto libraries for SHA-3 implementation. Design the module to efficiently process frame data and generate 512-bit hash digests. Implement options for extracting entropy from specific regions of frames or applying additional entropy concentration techniques before hashing. Optimize for performance to minimize latency.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Verify hash output format correctness. Test entropy quality using statistical test suites. Benchmark hashing performance."
         },
         {
@@ -118,7 +118,7 @@
             3
           ],
           "details": "Use the `async-nats` crate for NATS integration. Implement asynchronous publishing of hash digests to configurable NATS subjects. Include connection management, reconnection logic, and error handling. Design for minimal latency between hash generation and publication. Add configurable options for message format and metadata inclusion.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test with local and remote NATS servers. Measure end-to-end latency from hash generation to successful publication. Verify message delivery reliability under various network conditions."
         },
         {
@@ -132,7 +132,7 @@
             4
           ],
           "details": "Implement a configurable agent that integrates all modules. Create a configuration system supporting file-based and environment variable configuration. Add performance monitoring to track latency at each stage of the pipeline. Implement graceful shutdown and resource cleanup. Optimize for overall performance to achieve <100ms end-to-end latency. Include logging and optional metrics exposure via Prometheus or similar.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Conduct end-to-end testing of the complete agent. Measure and optimize latency across the entire pipeline. Test with various configurations and under different load conditions."
         }
       ]

@@ -7,9 +7,9 @@ services:
     container_name: gcp_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: gcp_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gcp_password}
-      POSTGRES_DB: gcp
+      POSTGRES_USER: ${STANDARD_POSTGRES_USER:-gcp_user}
+      POSTGRES_PASSWORD: ${STANDARD_POSTGRES_PASSWORD:-gcp_password}
+      POSTGRES_DB: ${STANDARD_POSTGRES_DB:-gcp}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
@@ -31,9 +31,10 @@ services:
     container_name: gcp_timescaledb
     restart: unless-stopped
     environment:
-      POSTGRES_USER: gcp_user
+      POSTGRES_USER: ${TIMESCALEDB_USER:-gcp_user}
       POSTGRES_PASSWORD: ${TIMESCALEDB_PASSWORD:-gcp_password}
-      POSTGRES_DB: gcp_timeseries
+      POSTGRES_DB: ${TIMESCALEDB_DB_NAME:-gcp_timeseries}
+      TIMESCALEDB_TELEMETRY: ${TIMESCALEDB_TELEMETRY:-off}
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./config/timescaledb/timescaledb.conf:/etc/postgresql/timescaledb.conf
@@ -93,7 +94,7 @@ services:
     image: prometheuscommunity/postgres-exporter:latest
     container_name: gcp_postgres_exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://gcp_user:${POSTGRES_PASSWORD:-gcp_password}@postgres:5432/gcp?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${STANDARD_POSTGRES_USER:-gcp_user}:${STANDARD_POSTGRES_PASSWORD:-gcp_password}@postgres:5432/${STANDARD_POSTGRES_DB:-gcp}?sslmode=disable"
     ports:
       - "9187:9187"
     depends_on:

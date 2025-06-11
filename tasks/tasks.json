@@ -70,7 +70,7 @@
     {
       "id": 2,
       "title": "Edge Entropy Extraction Agent",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "description": "Develop a Rust-based agent that pulls frames from camera feeds and extracts entropy via SHA-3 512-bit hash digests",
       "details": "Implement a high-performance Rust agent that pulls frames from cameras at 1-30 FPS, processes them for entropy, and outputs SHA-3 512-bit hash samples. The agent should achieve <100ms latency from frame capture to hash digest delivery via NATS.",

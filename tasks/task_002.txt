@@ -1,6 +1,6 @@
 # Task ID: 2
 # Title: Edge Entropy Extraction Agent
-# Status: pending
+# Status: in-progress
 # Dependencies: 1
 # Priority: high
 # Description: Develop a Rust-based agent that pulls frames from camera feeds and extracts entropy via SHA-3 512-bit hash digests

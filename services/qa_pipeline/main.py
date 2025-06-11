@@ -1,27 +1,31 @@
+#!/usr/bin/env python3
+
 """
 Main entry point for the QA Pipeline service.
 
-This module provides command-line and service functionality for running statistical
-tests on entropy samples and calculating quality scores.
+Provides both CLI functionality for one-off testing and a NATS integration for
+service-oriented operation.
 """
 
 import argparse
 import asyncio
+import importlib
 import json
 import logging
 import os
 import sys
-import time
-import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Union
 
 import nats
 import tomli
 from pydantic import ValidationError
 
-from framework.data_types import EntropySample, OverallQualityScore, TestConfiguration
+from framework.data_types import EntropySample, TestConfiguration, OverallQualityScore
 from framework.test_runner import TestRunner
+from scoring.quality_tracker import QualityTracker
+from scoring.nats_handler import QualityScoringNatsHandler
 
 
 # Configure logging
@@ -33,389 +37,328 @@ logging.basicConfig(
 logger = logging.getLogger("qa_pipeline")
 
 
-class QAPipelineService:
-    """Main service class for the QA Pipeline."""
+def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+    """Load configuration from a TOML file.
     
-    def __init__(self, config_path: str = "config/qa_config.toml"):
-        """
-        Initialize the QA Pipeline service.
+    Args:
+        config_path: Path to the TOML config file, or None to use default
         
-        Args:
-            config_path: Path to the configuration file
-        """
-        self.config_path = config_path
-        self.config = self._load_config(config_path)
-        self.test_runner = self._initialize_test_runner()
-        self.nats_client = None
+    Returns:
+        Dictionary containing the configuration
+        
+    Raises:
+        FileNotFoundError: If the config file does not exist
+        ValueError: If the config file can't be parsed
+    """
+    if not config_path:
+        # Use default config path
+        config_path = os.path.join(os.path.dirname(__file__), 
+                                  'config', 'qa_config.toml')
     
-    def _load_config(self, config_path: str) -> Dict:
-        """
-        Load configuration from a TOML file.
-        
-        Args:
-            config_path: Path to the configuration file
-            
-        Returns:
-            Parsed configuration dictionary
-            
-        Raises:
-            FileNotFoundError: If the configuration file doesn't exist
-            tomli.TOMLDecodeError: If the TOML file is invalid
-        """
-        try:
-            with open(config_path, "rb") as f:
-                return tomli.load(f)
-        except FileNotFoundError:
-            logger.error(f"Configuration file not found: {config_path}")
-            logger.info("Creating default configuration...")
-            self._create_default_config(config_path)
-            with open(config_path, "rb") as f:
-                return tomli.load(f)
+    # Ensure the path exists
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Config file not found: {config_path}")
     
-    def _create_default_config(self, config_path: str) -> None:
-        """
-        Create a default configuration file.
-        
-        Args:
-            config_path: Path to save the configuration file
-        """
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(os.path.abspath(config_path)), exist_ok=True)
-        
-        # Default configuration
-        default_config = """
-# QA Pipeline Configuration
+    try:
+        with open(config_path, "rb") as f:
+            config = tomli.load(f)
+        return config
+    except tomli.TOMLDecodeError as e:
+        raise ValueError(f"Error parsing config file: {e}")
 
-[service]
-# Service settings
-name = "qa_pipeline"
-log_level = "INFO"
 
-# NATS Connection settings
-[nats]
-enabled = true
-servers = ["nats://localhost:4222"]
-subject_input = "qa.input"
-subject_output = "qa.output"
-queue_group = "qa_workers"
-connect_timeout = 5.0
-reconnect_attempts = 5
-max_reconnect_attempts = -1  # -1 means unlimited
-
-# Test settings
-[tests]
-# Minimum number of bits required for tests
-min_sample_size = 100
-
-# Available tests
-[[tests.test_configs]]
-test_id = "nist_frequency.NistFrequencyTest"
-enabled = true
-parameters = { }
-threshold = 0.01  # p-value threshold
-weight = 1.0  # weight in the overall score
-
-# Add more tests as needed
-# [[tests.test_configs]]
-# test_id = "chi_squared.ChiSquaredTest"
-# enabled = true
-# parameters = { }
-# threshold = 0.01
-# weight = 1.0
-
-# Node status monitoring
-[node_monitoring]
-enabled = true
-rolling_window_samples = 100  # Number of samples to keep for rolling average
-threshold_score = 70.0  # Minimum acceptable rolling score
-flagging_period = 10  # Number of consecutive below-threshold scores to flag a node
-"""
-        
-        with open(config_path, "w") as f:
-            f.write(default_config.lstrip())
-        
-        logger.info(f"Default configuration created at {config_path}")
+def setup_quality_system(config: Dict[str, Any]) -> tuple[QualityTracker, QualityScoringNatsHandler]:
+    """Set up the quality scoring system.
     
-    def _initialize_test_runner(self) -> TestRunner:
-        """
-        Initialize the test runner with configured tests.
+    Args:
+        config: Configuration dictionary
         
-        Returns:
-            Configured TestRunner instance
-        """
-        test_configs = []
-        
-        # Convert configuration dict to TestConfiguration objects
-        for test_config_dict in self.config.get("tests", {}).get("test_configs", []):
-            if test_config_dict.get("enabled", True):
-                try:
-                    test_configs.append(TestConfiguration(
-                        test_id=test_config_dict["test_id"],
-                        enabled=test_config_dict.get("enabled", True),
-                        parameters=test_config_dict.get("parameters", {}),
-                        threshold=test_config_dict.get("threshold"),
-                        weight=test_config_dict.get("weight", 1.0)
-                    ))
-                except (ValidationError, KeyError) as e:
-                    logger.error(f"Invalid test configuration: {e}")
-        
-        return TestRunner(test_configs)
+    Returns:
+        Tuple of (QualityTracker, QualityScoringNatsHandler)
+    """
+    # Create quality tracker
+    quality_tracker = QualityTracker(config)
     
-    def process_sample(self, sample: EntropySample) -> OverallQualityScore:
-        """
-        Process an entropy sample through the test pipeline.
-        
-        Args:
-            sample: The entropy sample to process
-            
-        Returns:
-            Overall quality score with individual test results
-        """
-        # Check if the sample meets minimum size requirements
-        min_sample_size = self.config.get("tests", {}).get("min_sample_size", 100)
-        
-        # Calculate bits depending on the data format
-        if isinstance(sample.data, bytes):
-            bits = len(sample.data) * 8
-        elif isinstance(sample.data, str) and sample.data_format == "binary":
-            bits = len(sample.data)
-        elif isinstance(sample.data, str) and sample.data_format == "hex":
-            bits = len(sample.data) * 4
-        elif isinstance(sample.data, list):
-            bits = len(sample.data)
-        else:
-            bits = 0
-        
-        if bits < min_sample_size:
-            logger.warning(f"Sample size {bits} bits is below minimum {min_sample_size}")
-            # Could return a partial result or error here
-        
-        # Process the sample through the test runner
-        start_time = time.time()
-        result = self.test_runner.run_all_tests(sample)
-        processing_time = time.time() - start_time
-        
-        logger.info(
-            f"Sample {sample.sample_id} processed in {processing_time:.2f}s with "
-            f"score {result.score:.2f} ({result.passed_tests}/{result.total_tests} tests passed)"
-        )
-        
-        return result
+    # Create NATS handler
+    nats_handler = QualityScoringNatsHandler(config, quality_tracker)
     
-    async def connect_nats(self) -> None:
-        """
-        Connect to NATS server for message processing.
+    return quality_tracker, nats_handler
+
+
+def setup_test_runner(config: Dict[str, Any]) -> TestRunner:
+    """Set up the test runner.
+    
+    Args:
+        config: Configuration dictionary
         
-        Raises:
-            Exception: If connection fails after retries
-        """
-        if not self.config.get("nats", {}).get("enabled", False):
-            logger.info("NATS integration disabled in configuration")
+    Returns:
+        TestRunner instance
+    """
+    test_configs = []
+    
+    # Convert configuration dict to TestConfiguration objects
+    for test_config_dict in config.get("tests", {}).get("test_configs", []):
+        if test_config_dict.get("enabled", True):
+            try:
+                test_configs.append(TestConfiguration(
+                    test_id=test_config_dict["test_id"],
+                    enabled=test_config_dict.get("enabled", True),
+                    parameters=test_config_dict.get("parameters", {}),
+                    threshold=test_config_dict.get("threshold"),
+                    weight=test_config_dict.get("weight", 1.0)
+                ))
+            except (ValidationError, KeyError) as e:
+                logger.error(f"Invalid test configuration: {e}")
+    
+    return TestRunner(test_configs)
+
+
+async def process_entropy_sample(test_runner: TestRunner, sample: EntropySample) -> OverallQualityScore:
+    """Process a single entropy sample through the test pipeline.
+    
+    Args:
+        test_runner: The test runner to use
+        sample: The entropy sample to test
+        
+    Returns:
+        OverallQualityScore with the test results
+    """
+    # Run asynchronously in case some tests are time-consuming
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, test_runner.run_all_tests, sample)
+    
+    logger.debug(f"Sample processed with score {result.score:.2f} "
+                f"({result.passed_tests}/{result.total_tests} tests passed)")
+    
+    return result
+
+
+async def handle_entropy_sample(msg, test_runner: TestRunner, nc, quality_tracker: Optional[QualityTracker] = None):
+    """Handle an entropy sample message from NATS.
+    
+    Args:
+        msg: The NATS message
+        test_runner: TestRunner instance
+        nc: NATS client
+        quality_tracker: Optional QualityTracker instance
+    """
+    subject = msg.subject
+    reply_subject = msg.reply
+    data = msg.data.decode()
+    
+    try:
+        # Parse the message
+        message_data = json.loads(data)
+        
+        # Extract the sample and metadata
+        sample_data = message_data.get("sample")
+        correlation_id = message_data.get("correlation_id", "")
+        
+        if not sample_data:
+            logger.error("Received message without sample data")
             return
-        
-        nats_config = self.config.get("nats", {})
-        servers = nats_config.get("servers", ["nats://localhost:4222"])
-        connect_timeout = nats_config.get("connect_timeout", 5.0)
-        
-        logger.info(f"Connecting to NATS servers: {servers}")
-        
-        try:
-            self.nats_client = await nats.connect(
-                servers=servers,
-                connect_timeout=connect_timeout
-            )
-            logger.info("Connected to NATS server")
-        except Exception as e:
-            logger.error(f"Failed to connect to NATS: {e}")
-            raise
-    
-    async def subscribe_to_input(self) -> None:
-        """
-        Subscribe to the input subject for entropy samples.
-        
-        Raises:
-            ValueError: If NATS client is not connected
-        """
-        if not self.nats_client:
-            raise ValueError("NATS client not connected")
-        
-        nats_config = self.config.get("nats", {})
-        subject = nats_config.get("subject_input", "qa.input")
-        queue_group = nats_config.get("queue_group", "qa_workers")
-        
-        logger.info(f"Subscribing to {subject} (queue group: {queue_group})")
-        
-        subscription = await self.nats_client.subscribe(
-            subject=subject,
-            queue=queue_group,
-            cb=self._process_message
+            
+        # Create an entropy sample
+        sample = EntropySample(
+            data=sample_data.get("data"),
+            data_format=sample_data.get("format", "binary"),
+            timestamp=sample_data.get("timestamp"),
+            metadata=sample_data.get("metadata", {})
         )
         
-        logger.info(f"Subscribed to {subject}")
+        # Process the sample
+        result = await process_entropy_sample(test_runner, sample)
         
-        return subscription
-    
-    async def _process_message(self, msg) -> None:
-        """
-        Process an incoming NATS message.
-        
-        Args:
-            msg: NATS message object
-        """
-        try:
-            # Parse the message
-            data = json.loads(msg.data.decode())
-            
-            # Generate a sample ID if not provided
-            sample_id = data.get("sample_id", str(uuid.uuid4()))
-            
-            # Create an entropy sample from the message data
-            sample = EntropySample(
-                sample_id=sample_id,
-                data=data.get("data"),
-                data_format=data.get("data_format", "binary"),
-                source_id=data.get("source_id"),
-                timestamp=datetime.fromtimestamp(data.get("timestamp", time.time())),
-                metadata=data.get("metadata", {})
-            )
-            
-            # Process the sample
-            result = self.process_sample(sample)
-            
-            # Publish the result
-            await self._publish_result(result)
-            
-            # Acknowledge the message
-            await msg.ack()
-            
-        except Exception as e:
-            logger.error(f"Error processing message: {e}")
-            # Depending on the error, might want to: nack, requeue, publish an error, etc.
-    
-    async def _publish_result(self, result: OverallQualityScore) -> None:
-        """
-        Publish test results to the output subject.
-        
-        Args:
-            result: The test results to publish
-            
-        Raises:
-            ValueError: If NATS client is not connected
-        """
-        if not self.nats_client:
-            raise ValueError("NATS client not connected")
-        
-        nats_config = self.config.get("nats", {})
-        subject = nats_config.get("subject_output", "qa.output")
-        
-        # Convert the result to a JSON-serializable dictionary
-        result_dict = result.dict()
-        
-        # Convert datetime objects to ISO format strings
-        result_dict["timestamp"] = result_dict["timestamp"].isoformat()
-        
-        # Convert test results (which may contain datetime objects)
-        for i, test_result in enumerate(result_dict["test_results"]):
-            if "timestamp" in test_result and test_result["timestamp"]:
-                result_dict["test_results"][i]["timestamp"] = test_result["timestamp"].isoformat()
+        # Update quality tracker if node_id is provided
+        if quality_tracker and sample.metadata and "node_id" in sample.metadata:
+            node_id = sample.metadata["node_id"]
+            sample_id = sample.metadata.get("id", str(sample.timestamp))
+            quality_tracker.record_score(node_id, sample_id, result)
         
         # Publish the result
-        await self.nats_client.publish(
-            subject=subject,
-            payload=json.dumps(result_dict).encode()
+        await nc.publish(
+            f"{reply_subject}",
+            json.dumps({
+                "correlation_id": correlation_id,
+                "result": result.dict()
+            }).encode()
         )
         
-        logger.debug(f"Published result for sample {result.sample_id} to {subject}")
+    except json.JSONDecodeError:
+        logger.error(f"Invalid JSON in message: {data}")
+    except Exception as e:
+        logger.error(f"Error processing entropy sample: {e}")
+
+
+async def run_service(config: Dict[str, Any]):
+    """Run the QA Pipeline as a service.
     
-    async def run(self) -> None:
-        """Run the QA Pipeline service until interrupted."""
+    Connects to NATS and subscribes to entropy sample messages.
+    
+    Args:
+        config: Service configuration
+    """
+    # Get NATS configuration
+    nats_config = config.get("nats", {})
+    servers = nats_config.get("servers", ["nats://localhost:4222"])
+    subject_prefix = nats_config.get("subject_prefix", "gcp")
+    
+    # Create test runner
+    test_runner = setup_test_runner(config)
+    
+    # Set up quality scoring system
+    quality_tracker, quality_nats_handler = setup_quality_system(config)
+    
+    # Connect to NATS
+    try:
+        logger.info(f"Connecting to NATS servers: {servers}")
+        nc = await nats.connect(servers=servers)
+        
+        # Also connect quality scoring handler
+        await quality_nats_handler.connect()
+    except Exception as e:
+        logger.error(f"Failed to connect to NATS: {e}")
+        return
+        
+    logger.info("Connected to NATS")
+    
+    # Subscribe to subject with wildcard
+    entropy_subject = f"{subject_prefix}.entropy.samples.*"
+    
+    async def message_handler(msg):
+        nonlocal test_runner, quality_tracker
+        await handle_entropy_sample(msg, test_runner, nc, quality_tracker)
+    
+    # Subscribe to entropy samples
+    sub = await nc.subscribe(entropy_subject, cb=message_handler)
+    logger.info(f"Subscribed to {entropy_subject}")
+    
+    # Start periodic tasks for quality monitoring
+    periodic_task = asyncio.create_task(
+        quality_nats_handler.run_periodic_tasks()
+    )
+    
+    # Run until interrupted
+    try:
+        logger.info("QA Pipeline service is running. Press Ctrl+C to exit...")
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Shutdown requested")
+    finally:
+        # Clean up
+        periodic_task.cancel()
         try:
-            # Connect to NATS if enabled
-            if self.config.get("nats", {}).get("enabled", False):
-                await self.connect_nats()
-                subscription = await self.subscribe_to_input()
-                
-                # Keep the service running
-                logger.info("QA Pipeline service running, press Ctrl+C to exit")
-                while True:
-                    await asyncio.sleep(1.0)
-                    
-        except KeyboardInterrupt:
-            logger.info("Service interrupted")
-        finally:
-            # Cleanup
-            if self.nats_client:
-                await self.nats_client.drain()
-                logger.info("NATS connection closed")
+            await periodic_task
+        except asyncio.CancelledError:
+            pass
+            
+        await sub.unsubscribe()
+        await quality_nats_handler.disconnect()
+        await nc.close()
+        logger.info("Shutdown complete")
 
 
-def parse_args():
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="QA Pipeline for entropy data")
-    parser.add_argument(
-        "--config", 
-        default="config/qa_config.toml", 
-        help="Path to configuration file"
-    )
-    parser.add_argument(
-        "--test-file", 
-        help="Process a single file with entropy data"
-    )
-    parser.add_argument(
-        "--format", 
-        choices=["binary", "hex", "json"],
-        default="binary", 
-        help="Format of the input file"
-    )
-    parser.add_argument(
-        "--log-level", 
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO", 
-        help="Logging level"
-    )
-    return parser.parse_args()
-
-
-async def main():
-    """Main entry point."""
-    args = parse_args()
+def process_file(file_path: str, config_path: Optional[str] = None) -> None:
+    """Process an entropy data file and print results.
     
-    # Set logging level
-    logging.getLogger("qa_pipeline").setLevel(getattr(logging, args.log_level))
+    Args:
+        file_path: Path to the entropy data file
+        config_path: Optional path to the configuration file
+    """
+    # Load config
+    config = load_config(config_path)
     
-    # Create the service
-    service = QAPipelineService(config_path=args.config)
+    # Set up test runner
+    test_runner = setup_test_runner(config)
     
-    # If a test file was specified, process it
-    if args.test_file:
-        with open(args.test_file, "rb") as f:
+    try:
+        # Read file
+        with open(file_path, "rb") as f:
             data = f.read()
         
-        # Create a sample from the file
-        if args.format == "binary":
-            sample = EntropySample(
-                sample_id=str(uuid.uuid4()),
-                data=data,
-                data_format="binary"
-            )
-        elif args.format == "hex":
-            sample = EntropySample(
-                sample_id=str(uuid.uuid4()),
-                data=data.decode().strip(),
-                data_format="hex"
-            )
-        elif args.format == "json":
-            json_data = json.loads(data.decode())
-            sample = EntropySample(**json_data)
+        # Create sample
+        sample = EntropySample(
+            data=data,
+            data_format="binary",
+            timestamp=datetime.now().isoformat()
+        )
         
-        # Process the sample and print results
-        result = service.process_sample(sample)
-        print(json.dumps(result.dict(), indent=2, default=str))
+        # Process sample
+        result = test_runner.run_all_tests(sample)
         
+        # Print results
+        print(f"\nOverall Quality Score: {result.score:.2f}/100")
+        print(f"Tests passed: {result.passed_tests}/{result.total_tests}")
+        print("\nIndividual Test Results:")
+        
+        for test_result in result.individual_scores:
+            status = "✓ PASS" if test_result.passed else "✗ FAIL"
+            print(f"  {test_result.test_name}: {test_result.score:.2f} - {status}")
+            
+            # Print key statistics if present
+            if test_result.statistics:
+                for key, value in test_result.statistics.items():
+                    if key in ["p_value", "chi_squared", "runs", "frequency"]:
+                        print(f"    {key}: {value}")
+        
+    except FileNotFoundError:
+        logger.error(f"File not found: {file_path}")
+    except Exception as e:
+        logger.error(f"Error processing file: {e}")
+
+
+def main():
+    """Main entry point for the QA Pipeline CLI."""
+    parser = argparse.ArgumentParser(description="QA Pipeline for entropy testing")
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
+    
+    # Service command
+    service_parser = subparsers.add_parser("service", help="Run as a service")
+    service_parser.add_argument(
+        "--config", "-c",
+        help="Path to the configuration file",
+        default=None
+    )
+    
+    # Process command
+    process_parser = subparsers.add_parser("process", help="Process a single file")
+    process_parser.add_argument(
+        "file",
+        help="Path to the entropy data file"
+    )
+    process_parser.add_argument(
+        "--config", "-c",
+        help="Path to the configuration file",
+        default=None
+    )
+    
+    args = parser.parse_args()
+    
+    if args.command == "service":
+        # Load config
+        try:
+            config = load_config(args.config)
+        except (FileNotFoundError, ValueError) as e:
+            logger.error(f"Configuration error: {e}")
+            sys.exit(1)
+        
+        # Run the service
+        try:
+            asyncio.run(run_service(config))
+        except KeyboardInterrupt:
+            logger.info("Service stopped by user")
+        except Exception as e:
+            logger.error(f"Service error: {e}")
+            sys.exit(1)
+    
+    elif args.command == "process":
+        process_file(args.file, args.config)
+    
     else:
-        # Run as a service
-        await service.run()
+        parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

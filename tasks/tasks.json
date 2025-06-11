@@ -140,7 +140,7 @@
     {
       "id": 3,
       "title": "Quality Assurance Pipeline",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "description": "Develop a QA service for validating and scoring entropy samples",
       "details": "Implement a service that runs statistical tests (NIST subset, ApEn, χ², auto-correlation) on entropy samples, scoring each on a 0-100 scale. Flagging mechanism for nodes when rolling score falls below threshold for a defined period.",
@@ -155,7 +155,7 @@
           "description": "Create the foundation for statistical testing by implementing the core test framework that will run NIST subset tests, ApEn, χ², and auto-correlation on entropy samples.",
           "dependencies": [],
           "details": "Develop a modular framework that can execute multiple statistical tests on entropy data. Create abstract interfaces for test implementations, a test runner to execute multiple tests in sequence, and data structures to store test results. Include configuration options for test parameters and thresholds. Use a plugin architecture to allow easy addition of new tests in the future.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Unit test each statistical test implementation with known entropy samples that have predetermined expected results. Verify the test runner correctly executes all tests and aggregates results."
         },
         {
@@ -166,7 +166,7 @@
             1
           ],
           "details": "For each test: 1) Research and document the mathematical basis, 2) Implement the algorithm according to established standards, 3) Optimize for performance with large entropy samples, 4) Add proper error handling, 5) Document input requirements and output interpretations. Ensure each test returns standardized result objects that can be used by the scoring system.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Test each implementation against reference implementations or published test vectors. Include edge cases such as completely random data, completely non-random data, and borderline cases."
         },
         {
@@ -177,7 +177,7 @@
             2
           ],
           "details": "Design a weighted scoring algorithm that considers the results of all tests. Define the relative importance of each test and how they contribute to the final score. Implement normalization functions to convert raw test results to comparable scales. Create a configurable weighting system that can be adjusted based on specific entropy quality requirements. Document the scoring methodology thoroughly for transparency.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Verify scoring with samples of known quality. Test edge cases (perfect entropy, completely predictable patterns) to ensure they score appropriately at the extremes. Validate that small changes in entropy quality produce appropriate changes in scores."
         },
         {
@@ -188,7 +188,7 @@
             3
           ],
           "details": "Create a persistent storage solution to maintain historical score data for each node. Implement a rolling average calculation with configurable time windows. Develop a flagging mechanism with configurable thresholds and duration parameters. Include notification capabilities when nodes are flagged or return to acceptable quality levels. Design an administrative interface to view node status and manually override flags if necessary.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Simulate node score patterns that should trigger flags and verify correct flagging behavior. Test edge cases around the threshold boundaries. Verify that historical data is correctly maintained and that rolling averages are calculated accurately."
         },
         {
@@ -200,7 +200,7 @@
             4
           ],
           "details": "Design and implement RESTful API endpoints for submitting entropy samples for testing, retrieving test results and scores, and querying node status. Create a message queue consumer for asynchronous processing of samples. Implement authentication and authorization for API access. Develop client libraries or SDKs for common languages to facilitate integration. Document the API thoroughly with OpenAPI/Swagger specifications.",
-          "status": "pending",
+          "status": "done",
           "testStrategy": "Perform integration testing with mock clients. Test API performance under load. Verify correct handling of malformed requests, authentication failures, and other error conditions. Test end-to-end flows from sample submission to score calculation and node flagging."
         }
       ]
@@ -208,7 +208,7 @@
     {
       "id": 4,
       "title": "GPU-accelerated Coherence Metrics",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "description": "Implement GPU-accelerated algorithms for computing coherence metrics (CEC, PNS, FCI, MFR, RCC)",
       "details": "Develop CUDA/CuPy implementations of coherence metrics including Cross-Entropy Correlation (CEC), Phase-Normalized Spectra (PNS), Fractal Coherence Index (FCI), Multi-Fractal Residual (MFR), and Relative Complexity Coefficient (RCC). Metrics should be computed on 5-second sliding windows and achieve performance targets on an 8vCPU VPS.",
@@ -223,7 +223,7 @@
           "description": "Develop CUDA/CuPy implementations for the CEC and PNS coherence metrics that can process 5-second sliding windows of data efficiently on GPU.",
           "dependencies": [],
           "details": "Create a module that implements CEC which measures the mutual information between signals, and PNS which normalizes phase relationships. Use CuPy for array operations and CUDA kernels for performance-critical sections. Implement sliding window functionality with appropriate overlap handling. Ensure the implementation can handle variable input sizes and sampling rates.",
-          "status": "pending",
+          "status": "in-progress",
           "testStrategy": "Compare results against CPU implementations for accuracy. Benchmark performance on 8vCPU VPS with various dataset sizes. Test with synthetic data having known coherence properties."
         },
         {

@@ -1,6 +1,6 @@
 # Task ID: 3
 # Title: Quality Assurance Pipeline
-# Status: pending
+# Status: done
 # Dependencies: 2
 # Priority: high
 # Description: Develop a QA service for validating and scoring entropy samples
@@ -11,31 +11,31 @@ Implement a service that runs statistical tests (NIST subset, ApEn, χ², auto-c
 Verify that nodes are flagged when rolling score is <70 for 10s. Confirm that the QA pipeline can process samples within the system's end-to-end latency budget.
 
 # Subtasks:
-## 1. Implement Core Statistical Test Framework [pending]
+## 1. Implement Core Statistical Test Framework [done]
 ### Dependencies: None
 ### Description: Create the foundation for statistical testing by implementing the core test framework that will run NIST subset tests, ApEn, χ², and auto-correlation on entropy samples.
 ### Details:
 Develop a modular framework that can execute multiple statistical tests on entropy data. Create abstract interfaces for test implementations, a test runner to execute multiple tests in sequence, and data structures to store test results. Include configuration options for test parameters and thresholds. Use a plugin architecture to allow easy addition of new tests in the future.
 
-## 2. Implement Individual Statistical Tests [pending]
+## 2. Implement Individual Statistical Tests [done]
 ### Dependencies: 3.1
 ### Description: Implement the specific statistical tests required for entropy validation: NIST subset tests, Approximate Entropy (ApEn), Chi-Square (χ²), and auto-correlation tests.
 ### Details:
 For each test: 1) Research and document the mathematical basis, 2) Implement the algorithm according to established standards, 3) Optimize for performance with large entropy samples, 4) Add proper error handling, 5) Document input requirements and output interpretations. Ensure each test returns standardized result objects that can be used by the scoring system.
 
-## 3. Develop Scoring System [pending]
+## 3. Develop Scoring System [done]
 ### Dependencies: 3.2
 ### Description: Create a scoring system that converts the results of multiple statistical tests into a normalized 0-100 quality score for each entropy sample.
 ### Details:
 Design a weighted scoring algorithm that considers the results of all tests. Define the relative importance of each test and how they contribute to the final score. Implement normalization functions to convert raw test results to comparable scales. Create a configurable weighting system that can be adjusted based on specific entropy quality requirements. Document the scoring methodology thoroughly for transparency.
 
-## 4. Implement Node Monitoring and Flagging System [pending]
+## 4. Implement Node Monitoring and Flagging System [done]
 ### Dependencies: 3.3
 ### Description: Develop a system to track entropy quality scores over time for each node and flag nodes when their rolling average score falls below a defined threshold for a specified period.
 ### Details:
 Create a persistent storage solution to maintain historical score data for each node. Implement a rolling average calculation with configurable time windows. Develop a flagging mechanism with configurable thresholds and duration parameters. Include notification capabilities when nodes are flagged or return to acceptable quality levels. Design an administrative interface to view node status and manually override flags if necessary.
 
-## 5. Create API and Integration Points [pending]
+## 5. Create API and Integration Points [done]
 ### Dependencies: 3.3, 3.4
 ### Description: Develop the service API and integration points to allow the QA pipeline to receive entropy samples, return quality scores, and integrate with the broader system.
 ### Details:

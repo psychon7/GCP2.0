@@ -1,6 +1,6 @@
 # Task ID: 4
 # Title: GPU-accelerated Coherence Metrics
-# Status: pending
+# Status: in-progress
 # Dependencies: 3
 # Priority: high
 # Description: Implement GPU-accelerated algorithms for computing coherence metrics (CEC, PNS, FCI, MFR, RCC)
@@ -11,7 +11,7 @@ Develop CUDA/CuPy implementations of coherence metrics including Cross-Entropy C
 Verify that metrics are computed and updated every 5 seconds, written to TimescaleDB, and transmitted to UI via WebSockets. Ensure CPU usage remains <70% on 8vCPU system.
 
 # Subtasks:
-## 1. Implement GPU-accelerated Cross-Entropy Correlation (CEC) and Phase-Normalized Spectra (PNS) [pending]
+## 1. Implement GPU-accelerated Cross-Entropy Correlation (CEC) and Phase-Normalized Spectra (PNS) [in-progress]
 ### Dependencies: None
 ### Description: Develop CUDA/CuPy implementations for the CEC and PNS coherence metrics that can process 5-second sliding windows of data efficiently on GPU.
 ### Details:

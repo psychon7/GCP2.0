@@ -115,6 +115,23 @@ services:
     networks:
       - gcp_network
 
+  # QA Pipeline service for entropy validation
+  qa_pipeline:
+    build:
+      context: ../qa_pipeline
+      dockerfile: Dockerfile
+    container_name: gcp_qa_pipeline
+    restart: unless-stopped
+    depends_on:
+      - nats
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../qa_pipeline/config:/app/config
+    networks:
+      - gcp_network
+    command: ["python", "main.py", "service"]
+
 volumes:
   postgres_data:
   timescaledb_data:
